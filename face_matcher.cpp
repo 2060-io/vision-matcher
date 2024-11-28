@@ -210,14 +210,22 @@ int main() {
 
     std::string line;
     while (std::getline(std::cin, line)) { // Read from stdin
-        size_t commaPos = line.find(',');
-        if (commaPos == std::string::npos) {
+        size_t firstCommaPos = line.find(',');
+        if (firstCommaPos == std::string::npos) {
             std::cerr << "Error: Invalid input format: " << line << std::endl;
             continue;
         }
 
-        std::string image1_path = line.substr(0, commaPos);
-        std::string image2_path = line.substr(commaPos + 1);
+        std::string requestId = line.substr(0, firstCommaPos);
+        std::string remaining = line.substr(firstCommaPos + 1);
+        size_t secondCommaPos = remaining.find(',');
+        if (secondCommaPos == std::string::npos) {
+            std::cerr << "Error: Invalid input format: " << line << std::endl;
+            continue;
+        }
+
+        std::string image1_path = remaining.substr(0, secondCommaPos);
+        std::string image2_path = remaining.substr(secondCommaPos + 1);
 
         cv::Mat img1 = cv::imread(image1_path);
         cv::Mat img2 = cv::imread(image2_path);
@@ -231,12 +239,17 @@ int main() {
         std::vector<std::tuple<cv::Mat, cv::Rect>> extracted_faces_1 = extractFaces(img1, detector);
         std::vector<std::tuple<cv::Mat, cv::Rect>> extracted_faces_2 = extractFaces(img2, detector);
 
+        if (extracted_faces_1.empty() || extracted_faces_2.empty()) {
+            std::cerr << "Error: No faces detected in one or both images." << std::endl;
+            continue;
+        }
+
         cv::Mat pred1 = getPrediction(std::get<0>(extracted_faces_1[0]), opencv_model).clone();
         cv::Mat pred2 = getPrediction(std::get<0>(extracted_faces_2[0]), opencv_model).clone();
 
         double dist_img1_img2 = findCosineDistance(pred1, pred2);
 
-        std::cout <<"Response: {cosineDistance:"<< dist_img1_img2 << "}"<< std::endl; // Output to stdout
+        std::cout << "Response: {cosineDistance:" << dist_img1_img2 << ", requestId:" << requestId << "}" << std::endl; // Output to stdout
     }
 
     return 0;

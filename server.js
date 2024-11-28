@@ -51,24 +51,40 @@ app.post('/face_match', (req, res) => {
     const tempImage2Path = `./temp_img2_${currentRequestId}.jpg`;
 
     try {
+        let image1Exists = false;
+        let image2Exists = false;
+
         if (image1Path) {
-            // Use provided path for image 1
-            fs.copyFileSync(image1Path, tempImage1Path);
+            // Verify if the image file exists
+            if (fs.existsSync(image1Path)) {
+                fs.copyFileSync(image1Path, tempImage1Path);
+                image1Exists = true;
+            } else {
+                throw new Error('Image 1 path does not exist.');
+            }
         } else if (image1Base64) {
-            // Use provided base64 string for image 1
             fs.writeFileSync(tempImage1Path, image1Base64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
-        } else {
-            return res.status(400).send('Image 1 is required.');
+            image1Exists = true;
         }
 
         if (image2Path) {
-            // Use provided path for image 2
-            fs.copyFileSync(image2Path, tempImage2Path);
+            // Verify if the image file exists
+            if (fs.existsSync(image2Path)) {
+                fs.copyFileSync(image2Path, tempImage2Path);
+                image2Exists = true;
+            } else {
+                throw new Error('Image 2 path does not exist.');
+            }
         } else if (image2Base64) {
-            // Use provided base64 string for image 2
             fs.writeFileSync(tempImage2Path, image2Base64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
-        } else {
-            return res.status(400).send('Image 2 is required.');
+            image2Exists = true;
+        }
+
+        if (!image1Exists) {
+            throw new Error('Image 1 is required.');
+        }
+        if (!image2Exists) {
+            throw new Error('Image 2 is required.');
         }
 
         // Write the paths to the process's stdin
@@ -78,19 +94,16 @@ app.post('/face_match', (req, res) => {
         let output = '';
         const dataListener = (data) => {
             output += data.toString();
-            // Check if the read data contains a full output (example: expects a newline)
             if (output.includes('\n')) { // assuming `\n` signifies the end of output
                 cleanUp();
 
                 try {
-                    // Parse the output assuming it's in the format {cosineDistance: value}
                     const match = output.trim().match(/{cosineDistance:(-?\d+(\.\d+)?)}/);
 
                     if (match) {
                         const distance = parseFloat(match[1]);
                         res.send({ cosineDistance: distance });
                     } else {
-                        // If parsing failed, assume it might be an error message
                         console.error('Unexpected output format:', output.trim());
                         res.status(500).send('Error in face matching process: ' + output.trim());
                     }
@@ -113,8 +126,17 @@ app.post('/face_match', (req, res) => {
         cppProcess.stdout.on('data', dataListener);
 
     } catch (err) {
-        console.error(err);
-        res.status(500).send('Error processing request.');
+        console.error(err.message);
+
+        // Cleanup temporary files in case of an error
+        if (fs.existsSync(tempImage1Path)) {
+            fs.unlinkSync(tempImage1Path);
+        }
+        if (fs.existsSync(tempImage2Path)) {
+            fs.unlinkSync(tempImage2Path);
+        }
+
+        res.status(400).send(err.message);
     }
 });
 
