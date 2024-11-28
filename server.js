@@ -10,6 +10,7 @@ const port = 5123;
 const cppProcess = spawn('./face_matcher');
 
 let isReady = false;
+let requestCounter = 0; // Initialize the counter
 
 // Set up event listeners for the C++ process
 cppProcess.on('error', error => {
@@ -37,13 +38,17 @@ app.post('/face_match', (req, res) => {
         return res.status(503).send('Service is not ready yet.'); // 503: Service Unavailable
     }
 
+    // Increment the counter for each request
+    const currentRequestId = requestCounter++;
+
     const image1Base64 = req.body.image1_base64;
     const image2Base64 = req.body.image2_base64;
     const image1Path = req.body.image1_path;
     const image2Path = req.body.image2_path;
 
-    const tempImage1Path = './temp_img1.jpg';
-    const tempImage2Path = './temp_img2.jpg';
+    // Use the counter to create unique temporary file paths
+    const tempImage1Path = `./temp_img1_${currentRequestId}.jpg`;
+    const tempImage2Path = `./temp_img2_${currentRequestId}.jpg`;
 
     try {
         if (image1Path) {
