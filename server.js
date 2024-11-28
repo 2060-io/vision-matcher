@@ -9,18 +9,34 @@ const port = 5123;
 // Spawn the C++ process when the server starts
 const cppProcess = spawn('./face_matcher');
 
+let isReady = false;
+
 // Set up event listeners for the C++ process
 cppProcess.on('error', error => {
-    console.error('Error in C++ process: ', error);
+    console.error('Error in face_matcher process: ', error);
 });
 cppProcess.on('exit', code => {
-    console.error('C++ process exited with code: ', code);
+    console.error('face_matcher process exited with code: ', code);
     // Optionally, you might want to relaunch it here
+});
+
+// Listen for the READY signal from the C++ process and log output
+cppProcess.stdout.on('data', (data) => {
+    const output = data.toString();
+    console.log('<<face_matcher output>>:', output);
+
+    if (output.includes('--READY--')) {
+        isReady = true;
+    }
 });
 
 app.use(bodyParser.json({ limit: '50mb' }));
 
 app.post('/face_match', (req, res) => {
+    if (!isReady) {
+        return res.status(503).send('Service is not ready yet.'); // 503: Service Unavailable
+    }
+
     const image1Base64 = req.body.image1;
     const image2Base64 = req.body.image2;
 

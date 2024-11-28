@@ -6,3 +6,4 @@ personal_tests/
 *.jp2
 package-lock.json
 *.onnx
+face_matcher
