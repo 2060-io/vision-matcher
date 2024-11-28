@@ -1,7 +1,7 @@
 node_modules/
 personal_tests/
 *.jpeg
-*.jpe
+*.jpg
 *.png
 *.jp2
 package-lock.json

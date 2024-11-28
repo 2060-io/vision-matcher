@@ -236,7 +236,7 @@ int main() {
 
         double dist_img1_img2 = findCosineDistance(pred1, pred2);
 
-        std::cout << dist_img1_img2 << std::endl; // Output to stdout
+        std::cout <<"Response: {cosineDistance:"<< dist_img1_img2 << "}"<< std::endl; // Output to stdout
     }
 
     return 0;

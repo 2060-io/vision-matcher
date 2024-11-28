@@ -13,10 +13,10 @@ let isReady = false;
 let requestCounter = 0; // Initialize the counter
 
 // Set up event listeners for the C++ process
-cppProcess.on('error', error => {
+cppProcess.on('error', (error) => {
     console.error('Error in face_matcher process: ', error);
 });
-cppProcess.on('exit', code => {
+cppProcess.on('exit', (code) => {
     console.error('face_matcher process exited with code: ', code);
     // Optionally, you might want to retry launching it here
 });
@@ -81,8 +81,24 @@ app.post('/face_match', (req, res) => {
             // Check if the read data contains a full output (example: expects a newline)
             if (output.includes('\n')) { // assuming `\n` signifies the end of output
                 cleanUp();
-                const distance = parseFloat(output.trim());
-                res.send({ cosineDistance: distance });
+
+                try {
+                    // Parse the output assuming it's in the format {cosineDistance: value}
+                    const match = output.trim().match(/{cosineDistance:(-?\d+(\.\d+)?)}/);
+
+                    if (match) {
+                        const distance = parseFloat(match[1]);
+                        res.send({ cosineDistance: distance });
+                    } else {
+                        // If parsing failed, assume it might be an error message
+                        console.error('Unexpected output format:', output.trim());
+                        res.status(500).send('Error in face matching process: ' + output.trim());
+                    }
+
+                } catch (err) {
+                    console.error('Error parsing output:', err);
+                    res.status(500).send('Error processing face match result.');
+                }
 
                 // Cleanup temporary files
                 fs.unlinkSync(tempImage1Path);
