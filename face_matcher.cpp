@@ -33,14 +33,14 @@ std::vector<std::tuple<cv::Mat, cv::Rect>> extractFaces(
     std::vector<cv::Rect> faces;
     detector.detectMultiScale(img, faces, 1.1, 10);
 
-    std::cout << "Faces detected:" << std::endl;
-    for (const auto& face : faces) {
-        std::cout << "Face at ["
-                  << face.x << ", "
-                  << face.y << ", "
-                  << face.width << ", "
-                  << face.height << "]" << std::endl;
-    }
+    //std::cout << "Faces detected:" << std::endl;
+    //for (const auto& face : faces) {
+    //    std::cout << "Face at ["
+    //              << face.x << ", "
+    //              << face.y << ", "
+    //              << face.width << ", "
+    //              << face.height << "]" << std::endl;
+    //}
 
     // Create the 224x224 face images
     for (const auto &face : faces) {

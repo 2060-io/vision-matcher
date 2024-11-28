@@ -17,7 +17,7 @@ cppProcess.on('error', error => {
 });
 cppProcess.on('exit', code => {
     console.error('face_matcher process exited with code: ', code);
-    // Optionally, you might want to relaunch it here
+    // Optionally, you might want to retry launching it here
 });
 
 // Listen for the READY signal from the C++ process and log output
@@ -37,22 +37,37 @@ app.post('/face_match', (req, res) => {
         return res.status(503).send('Service is not ready yet.'); // 503: Service Unavailable
     }
 
-    const image1Base64 = req.body.image1;
-    const image2Base64 = req.body.image2;
+    const image1Base64 = req.body.image1_base64;
+    const image2Base64 = req.body.image2_base64;
+    const image1Path = req.body.image1_path;
+    const image2Path = req.body.image2_path;
 
-    if (!image1Base64 || !image2Base64) {
-        return res.status(400).send('Both images are required.');
-    }
+    const tempImage1Path = './temp_img1.jpg';
+    const tempImage2Path = './temp_img2.jpg';
 
     try {
-        const image1Path = './temp_img1.jpg';
-        const image2Path = './temp_img2.jpg';
+        if (image1Path) {
+            // Use provided path for image 1
+            fs.copyFileSync(image1Path, tempImage1Path);
+        } else if (image1Base64) {
+            // Use provided base64 string for image 1
+            fs.writeFileSync(tempImage1Path, image1Base64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+        } else {
+            return res.status(400).send('Image 1 is required.');
+        }
 
-        fs.writeFileSync(image1Path, image1Base64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
-        fs.writeFileSync(image2Path, image2Base64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+        if (image2Path) {
+            // Use provided path for image 2
+            fs.copyFileSync(image2Path, tempImage2Path);
+        } else if (image2Base64) {
+            // Use provided base64 string for image 2
+            fs.writeFileSync(tempImage2Path, image2Base64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+        } else {
+            return res.status(400).send('Image 2 is required.');
+        }
 
         // Write the paths to the process's stdin
-        cppProcess.stdin.write(`${image1Path},${image2Path}\n`);
+        cppProcess.stdin.write(`${tempImage1Path},${tempImage2Path}\n`);
 
         // Read data from stdout
         let output = '';
@@ -65,8 +80,8 @@ app.post('/face_match', (req, res) => {
                 res.send({ cosineDistance: distance });
 
                 // Cleanup temporary files
-                fs.unlinkSync(image1Path);
-                fs.unlinkSync(image2Path);
+                fs.unlinkSync(tempImage1Path);
+                fs.unlinkSync(tempImage2Path);
             }
         };
 

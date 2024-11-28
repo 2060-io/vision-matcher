@@ -20,6 +20,21 @@ Run:
                   ./test2_face_matching_local
 
 
+Test the endpoint with:
+curl -X POST http://localhost:5123/face_match \
+     -H "Content-Type: application/json" \
+     -d '{
+           "image1_path": "./angelina1.jpeg",
+           "image2_path": "./angelina2.jpeg"
+         }'
+
+curl -X POST http://localhost:5123/face_match \
+     -H "Content-Type: application/json" \
+     -d '{
+           "image1_path": "./angelina1.jpeg",
+           "image2_path": "./salma.jpeg"
+         }'
+
 
 
 
