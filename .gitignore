@@ -1,0 +1,8 @@
+node_modules/
+personal_tests/
+*.jpeg
+*.jpe
+*.png
+*.jp2
+package-lock.json
+*.onnx
