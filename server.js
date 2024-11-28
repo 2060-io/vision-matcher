@@ -87,8 +87,8 @@ app.post('/face_match', (req, res) => {
             throw new Error('Image 2 is required.');
         }
 
-        // Write the paths to the process's stdin
-        cppProcess.stdin.write(`${tempImage1Path},${tempImage2Path}\n`);
+        // Write the requestId with the paths to the process's stdin
+        cppProcess.stdin.write(`${currentRequestId},${tempImage1Path},${tempImage2Path}\n`);
 
         // Read data from stdout
         let output = '';
@@ -98,11 +98,12 @@ app.post('/face_match', (req, res) => {
                 cleanUp();
 
                 try {
-                    const match = output.trim().match(/{cosineDistance:(-?\d+(\.\d+)?)}/);
+                    const match = output.trim().match(/Response: {cosineDistance:(-?\d+(\.\d+)?), requestId:(\d+)}/);
 
                     if (match) {
                         const distance = parseFloat(match[1]);
-                        res.send({ cosineDistance: distance });
+                        const requestId = parseInt(match[3], 10);
+                        res.send({ cosineDistance: distance, requestId: requestId });
                     } else {
                         console.error('Unexpected output format:', output.trim());
                         res.status(500).send('Error in face matching process: ' + output.trim());
