@@ -105,14 +105,26 @@ app.post('/face_match', (req, res) => {
         return res.status(503).send('Service is not ready yet.');
     }
 
-    const requestId = Date.now(); // Use the current timestamp as a unique requestId
+    const requestId = Date.now();
     const image1Base64 = req.body.image1_base64;
     const image2Base64 = req.body.image2_base64;
     const image1Path = req.body.image1_path;
     const image2Path = req.body.image2_path;
+    const image1Base64Extension = req.body.image1Base64Extension;
+    const image2Base64Extension = req.body.image2Base64Extension;
 
-    const tempImage1Path = `./temp_img1_${requestId}.jpg`;
-    const tempImage2Path = `./temp_img2_${requestId}.jpg`;
+    // Validate that extension arguments are provided
+    if (image1Base64 && (!image1Base64Extension || !["jpg", "jpeg", "png", "jp2"].includes(image1Base64Extension))) {
+        return res.status(400).send("Image 1 base64 extension is missing or invalid.");
+    }
+
+    if (image2Base64 && (!image2Base64Extension || !["jpg", "jpeg", "png", "jp2"].includes(image2Base64Extension))) {
+        return res.status(400).send("Image 2 base64 extension is missing or invalid.");
+    }
+
+    // Use the validated extension
+    const tempImage1Path = `./temp_img1_${requestId}.${image1Base64Extension}`;
+    const tempImage2Path = `./temp_img2_${requestId}.${image2Base64Extension}`;
 
     try {
         let image1Exists = false;
@@ -153,12 +165,11 @@ app.post('/face_match', (req, res) => {
         });
 
         setTimeout(() => {
-            // Check if the task is still in the queue and respond with a timeout error
             if (queue.length() > 0) {
                 console.error('Request timed out:', requestId);
                 res.status(504).send('Face matching request timed out.');
             }
-        }, 10000); // Timeout after 10 seconds
+        }, 10000);
 
     } catch (err) {
         console.error(err.message);
