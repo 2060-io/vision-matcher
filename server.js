@@ -7,29 +7,40 @@ const async = require('async');
 const app = express();
 const port = 5123;
 
-// Spawn the C++ process when the server starts
-const cppProcess = spawn('./face_matcher');
-
+let cppProcess;
 let isReady = false;
 
-// Set up event listeners for the C++ process
-cppProcess.on('error', (error) => {
-    console.error('Error in face_matcher process: ', error);
-});
-cppProcess.on('exit', (code) => {
-    console.error('face_matcher process exited with code: ', code);
-    // Optionally, you might want to retry launching it here
-});
+function startFaceMatcher() {
+    console.log('Starting face_matcher process...');
+    cppProcess = spawn('./face_matcher');
 
-// Listen for the READY signal from the C++ process and log output
-cppProcess.stdout.on('data', (data) => {
-    const output = data.toString();
-    console.log('<<face_matcher output>>:', output);
+    isReady = false; // Ensure isReady is false before the process is ready
 
-    if (output.includes('--READY--')) {
-        isReady = true;
-    }
-});
+    // Set up event listeners for the C++ process
+    cppProcess.on('error', (error) => {
+        console.error('Error in face_matcher process: ', error);
+    });
+
+    cppProcess.on('exit', (code, signal) => {
+        console.error('face_matcher process exited with code: ', code, 'and signal:', signal);
+        isReady = false; // Reset readiness when the process exits
+        setTimeout(startFaceMatcher, 1000); // Restart the process after a 1 second delay
+    });
+
+    // Listen for the READY signal from the C++ process and log output
+    cppProcess.stdout.on('data', (data) => {
+        const output = data.toString();
+        console.log('<<face_matcher output>>:', output);
+
+        if (output.includes('--READY--')) {
+            console.log('face_matcher process is ready.');
+            isReady = true; // Set isReady to true when the process signals it is ready
+        }
+    });
+}
+
+// Start the face matcher process initially
+startFaceMatcher();
 
 app.use(bodyParser.json({ limit: '50mb' }));
 
@@ -168,5 +179,7 @@ app.listen(port, () => {
 });
 
 process.on('exit', () => {
-    cppProcess.kill();
+    if (cppProcess) {
+        cppProcess.kill();
+    }
 });
