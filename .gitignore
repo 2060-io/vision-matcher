@@ -131,10 +131,6 @@ dist
 
 personal_tests/
 my_chats/
-*.jpeg
-*.jpg
-*.png
-*.jp2
 *.onnx
 face_matcher
 

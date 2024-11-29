@@ -162,7 +162,7 @@ describe('POST /face_match', function () {
   });
 
   // Test parallel requests
-  it('should perform valid face matches in parallel', async function () {
+  it('should perform valid face matches in parallel and log request times', async function () {
     const tasks = [];
 
     // Preparing requests
@@ -177,8 +177,10 @@ describe('POST /face_match', function () {
     // Creating requests with a delay
     for (let i = 0; i < requests.length; i++) {
       tasks.push(
-        delay(i * 50).then(() =>
-          request(app)
+        delay(i * 50).then(async () => {
+          const startTime = Date.now();
+
+          await request(app)
             .post('/face_match')
             .send({
               image1_base64: requests[i].image1_base64,
@@ -188,6 +190,10 @@ describe('POST /face_match', function () {
             })
             .expect(200)
             .then(res => {
+              const endTime = Date.now();
+              const timeTaken = endTime - startTime;
+              console.log(`Request ${i+1} took ${timeTaken} ms`);
+
               const cosineDistance = res.body.cosineDistance;
               if (requests[i].expectedDistance === '<0.4') {
                 expect(cosineDistance).to.be.lessThan(0.4);
@@ -195,8 +201,8 @@ describe('POST /face_match', function () {
                 expect(cosineDistance).to.be.greaterThan(0.4);
               }
               expect(res.body).to.have.property('requestId').that.is.a('number');
-            })
-        )
+            });
+        })
       );
     }
 
