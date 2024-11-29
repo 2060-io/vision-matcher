@@ -194,3 +194,5 @@ process.on('exit', () => {
         cppProcess.kill();
     }
 });
+
+module.exports = app
