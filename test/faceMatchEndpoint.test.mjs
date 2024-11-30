@@ -19,6 +19,8 @@ function delay(ms) {
 }
 
 describe('POST /face_match', function () {
+  this.timeout(60000); //Timeout of 60 seconds for the model to be loaded
+  
   let image1Base64;
   let image2Base64;
   let image3Base64;
