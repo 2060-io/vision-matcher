@@ -6,6 +6,7 @@ const async = require('async');
 
 const app = express();
 const port = 5123;
+const config = require('./server_config.json')
 
 let cppProcess;
 let isReady = false;
@@ -13,16 +14,9 @@ let isReady = false;
 function startFaceMatcher() {
     console.log('Starting face_matcher process...');
     // Define the executable path
-    const executablePath = './face_matcher/bin/face_matcher';
-
-    // Define the arguments as an array
-    const args = [
-        '-face_detector_path', 'haarcascade_frontalface_default.xml',
-        '-face_matcher_model_path', './face_matcher_model.onnx',
-        '-distance_algorithm', 'cosine',
-        '-distance_threshold', '0.4'
-    ];
-
+    const executablePath = config.executablePath;
+    // Transform the arguments from key-value pairs to an array
+    const args = Object.entries(config.arguments).flatMap(entry => ['-' + entry[0], entry[1]]) 
     // Spawn the process with the executable and the arguments
     cppProcess = spawn(executablePath, args);
 
