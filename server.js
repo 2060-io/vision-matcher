@@ -12,7 +12,7 @@ let isReady = false;
 
 function startFaceMatcher() {
     console.log('Starting face_matcher process...');
-    cppProcess = spawn('./face_matcher');
+    cppProcess = spawn('./face_matcher/bin/face_matcher');
 
     isReady = false; // Ensure isReady is false before the process is ready
 
