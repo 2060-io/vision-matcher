@@ -4,4 +4,4 @@
 mkdir -p bin
 
 # Compile face_matcher with g++
-g++ face_matcher.cpp argument_parser.cpp detector.cpp face_extractor.cpp prediction.cpp utils.cpp -std=c++11 -o ./bin/face_matcher `pkg-config --cflags --libs opencv4`
+g++ -I./include main.cpp ./src/argument_parser.cpp ./src/detector.cpp ./src/face_extractor.cpp ./src/prediction.cpp ./src/utils.cpp -std=c++11 -o ./bin/face_matcher `pkg-config --cflags --libs opencv4`
