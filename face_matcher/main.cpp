@@ -23,6 +23,7 @@ int main(int argc, char* argv[]) {
     std::string face_matcher_model_path = "./face_matcher_model.onnx";
     std::string distance_algorithm = "cosine";
     double distance_threshold = 0.4;
+    bool allow_multi_faces = false;
 
     // Parse command-line arguments
     auto args = parseArguments(argc, argv);
@@ -39,6 +40,12 @@ int main(int argc, char* argv[]) {
     }
     if (args.count("-distance_threshold")) {
         distance_threshold = std::stod(args["-distance_threshold"]);
+    }
+    if (args.count("-allow_multi_faces")) {
+        std::string value = args["-allow_multi_faces"];
+        // Convert string to boolean
+        std::transform(value.begin(), value.end(), value.begin(), ::tolower);
+        allow_multi_faces = (value == "true" || value == "1");
     }
 
     std::cout << "Loading Models...." << std::endl;
@@ -89,8 +96,8 @@ int main(int argc, char* argv[]) {
         }
 
         // Extract faces using detector
-        std::vector<std::tuple<cv::Mat, cv::Rect>> extracted_faces_1 = extractFaces(img1, detector);
-        std::vector<std::tuple<cv::Mat, cv::Rect>> extracted_faces_2 = extractFaces(img2, detector);
+        std::vector<std::tuple<cv::Mat, cv::Rect>> extracted_faces_1 = extractFaces(img1, detector, allow_multi_faces);
+        std::vector<std::tuple<cv::Mat, cv::Rect>> extracted_faces_2 = extractFaces(img2, detector, allow_multi_faces);
 
         // Ensure faces are detected in both images
         if (extracted_faces_1.empty() || extracted_faces_2.empty()) {

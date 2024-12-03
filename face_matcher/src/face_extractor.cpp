@@ -6,6 +6,7 @@
 std::vector<std::tuple<cv::Mat, cv::Rect>> extractFaces(
     const cv::Mat& img,
     cv::CascadeClassifier& detector,
+    bool allow_multi_faces,
     const cv::Size& target_size) {
 
     // This vector will store the detected and processed face images and their bounding rectangles.
@@ -27,6 +28,11 @@ std::vector<std::tuple<cv::Mat, cv::Rect>> extractFaces(
     std::vector<cv::Rect> faces;
     // Detect faces in the image using the provided cascade classifier.
     detector.detectMultiScale(img, faces, 1.1, 10);
+
+    // Check if allow_multi_faces is false and more than one face is detected.
+    if (!allow_multi_faces && faces.size() != 1) {
+        return std::vector<std::tuple<cv::Mat, cv::Rect>>(); // Return an empty vector.
+    }
 
     // Iterate over each detected face.
     for (const auto &face : faces) {

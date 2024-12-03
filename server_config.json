@@ -4,6 +4,7 @@
         "face_detector_path": "haarcascade_frontalface_default.xml",
         "face_matcher_model_path": "./face_matcher_model.onnx",
         "distance_algorithm": "cosine",
-        "distance_threshold": "0.4"
+        "distance_threshold": "0.4",
+        "allow_multi_face": "false"
     }
 }

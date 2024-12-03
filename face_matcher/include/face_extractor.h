@@ -18,6 +18,9 @@
  * @param img The input image from which faces are to be extracted.
  * @param detector A reference to a cv::CascadeClassifier object used for detecting faces in the image.
  * @param target_size The target size to which each detected face is resized and padded. Defaults to (224, 224).
+ * @param allow_multi_faces A boolean value that determines the extraction behavior. 
+ *                          If true, the function returns all detected faces as preprocessed images.
+ *                          If false, the function returns an empty vector if more than one face is detected.
  *
  * @return A vector of tuples. Each tuple contains a cv::Mat (the preprocessed face image, normalized) and a 
  * cv::Rect (the bounding rectangle of the detected face in the input image).
@@ -28,6 +31,7 @@
 std::vector<std::tuple<cv::Mat, cv::Rect>> extractFaces(
     const cv::Mat& img,
     cv::CascadeClassifier& detector,
+    bool allow_multi_faces = false,
     const cv::Size& target_size = cv::Size(224, 224));
 
 #endif // FACE_EXTRACTOR_H
