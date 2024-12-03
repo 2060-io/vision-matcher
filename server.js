@@ -57,15 +57,16 @@ const queue = async.queue((task, callback) => {
             cleanUp();
 
             try {
-                const match = output.trim().match(/Response: {cosineDistance:(-?\d+(\.\d+)?), requestId:(\d+)}/);
+                const match = output.trim().match(/Response: {distance:(-?\d+(\.\d+)?), requestId:(\d+), match:(true|false)}/);
 
                 if (match) {
                     const distance = parseFloat(match[1]);
                     const responseRequestId = parseInt(match[3], 10);
+                    const responseMatch = match[4] === 'true';
 
                     // Verify that the response matches the current requestId
                     if (responseRequestId === requestId) {
-                        res.send({ cosineDistance: distance, requestId: responseRequestId });
+                        res.send({ match: responseMatch, distance: distance, requestId: responseRequestId });
                     } else {
                         console.error('Mismatched requestId:', { expected: requestId, received: responseRequestId });
                         res.status(500).send('Mismatched requestId in face matching process.');

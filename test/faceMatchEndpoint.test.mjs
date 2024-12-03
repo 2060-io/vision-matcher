@@ -98,7 +98,7 @@ describe('POST /face_match', function () {
   });
 
   // Test with images of the same person in base64
-  it('should perform a valid face match with image1 and image2 (cosineDistance < 0.4)', function (done) {
+  it('should perform a valid face match with image1 and image2 (distance < 0.4)', function (done) {
     request(app)
       .post('/face_match')
       .send({
@@ -110,14 +110,15 @@ describe('POST /face_match', function () {
       .expect(200)
       .end((err, res) => {
         if (err) return done(err);
-        expect(res.body).to.have.property('cosineDistance').that.is.lessThan(0.4);
+        expect(res.body).to.have.property('distance').that.is.lessThan(0.4);
         expect(res.body).to.have.property('requestId').that.is.a('number');
+        expect(res.body).to.have.property('match').that.is.true;
         done();
       });
   });
 
   // Test images of different people base64
-  it('should perform a valid face match with image1 and image3 (cosineDistance > 0.4)', function (done) {
+  it('should perform a valid face match with image1 and image3 (distance > 0.4)', function (done) {
     request(app)
       .post('/face_match')
       .send({
@@ -129,36 +130,39 @@ describe('POST /face_match', function () {
       .expect(200)
       .end((err, res) => {
         if (err) return done(err);
-        expect(res.body).to.have.property('cosineDistance').that.is.greaterThan(0.4);
+        expect(res.body).to.have.property('distance').that.is.greaterThan(0.4);
         expect(res.body).to.have.property('requestId').that.is.a('number');
+        expect(res.body).to.have.property('match').that.is.false;
         done();
       });
   });
 
   // Test with image paths of the same person
-  it('should perform a valid face match with image1_path and image2_path (cosineDistance < 0.4)', function (done) {
+  it('should perform a valid face match with image1_path and image2_path (distance < 0.4)', function (done) {
     request(app)
       .post('/face_match')
       .send({ image1_path: image1Path, image2_path: image2Path })
       .expect(200)
       .end((err, res) => {
         if (err) return done(err);
-        expect(res.body).to.have.property('cosineDistance').that.is.lessThan(0.4);
+        expect(res.body).to.have.property('distance').that.is.lessThan(0.4);
         expect(res.body).to.have.property('requestId').that.is.a('number');
+        expect(res.body).to.have.property('match').that.is.true;
         done();
       });
   });
 
   // Test with image paths of the diferent people
-  it('should perform a valid face match with image1_path and image2_path (cosineDistance < 0.4)', function (done) {
+  it('should perform a valid face match with image1_path and image2_path (distance < 0.4)', function (done) {
     request(app)
       .post('/face_match')
       .send({ image1_path: image1Path, image2_path: image3Path })
       .expect(200)
       .end((err, res) => {
         if (err) return done(err);
-        expect(res.body).to.have.property('cosineDistance').that.is.greaterThan(0.4);
+        expect(res.body).to.have.property('distance').that.is.greaterThan(0.4);
         expect(res.body).to.have.property('requestId').that.is.a('number');
+        expect(res.body).to.have.property('match').that.is.false;
         done();
       });
   });
@@ -196,11 +200,14 @@ describe('POST /face_match', function () {
               const timeTaken = endTime - startTime;
               console.log(`Request ${i+1} took ${timeTaken} ms`);
 
-              const cosineDistance = res.body.cosineDistance;
+              const distance = res.body.distance;
+              const match = res.body.match;
               if (requests[i].expectedDistance === '<0.4') {
-                expect(cosineDistance).to.be.lessThan(0.4);
+                expect(distance).to.be.lessThan(0.4);
+                expect(match).to.be.true;
               } else {
-                expect(cosineDistance).to.be.greaterThan(0.4);
+                expect(distance).to.be.greaterThan(0.4);
+                expect(match).to.be.false;
               }
               expect(res.body).to.have.property('requestId').that.is.a('number');
             });
