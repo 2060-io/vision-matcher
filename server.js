@@ -12,7 +12,19 @@ let isReady = false;
 
 function startFaceMatcher() {
     console.log('Starting face_matcher process...');
-    cppProcess = spawn('./face_matcher/bin/face_matcher');
+    // Define the executable path
+    const executablePath = './face_matcher/bin/face_matcher';
+
+    // Define the arguments as an array
+    const args = [
+        '-face_detector_path', 'haarcascade_frontalface_default.xml',
+        '-face_matcher_model_path', './face_matcher_model.onnx',
+        '-distance_algorithm', 'cosine',
+        '-distance_threshold', '0.4'
+    ];
+
+    // Spawn the process with the executable and the arguments
+    cppProcess = spawn(executablePath, args);
 
     isReady = false; // Ensure isReady is false before the process is ready
 
