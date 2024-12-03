@@ -132,6 +132,6 @@ dist
 personal_tests/
 my_chats/
 *.onnx
-face_matcher
+face_matcher/bin
 
 
