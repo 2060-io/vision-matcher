@@ -133,5 +133,6 @@ personal_tests/
 my_chats/
 *.onnx
 face_matcher/bin
+face_matcher/build
 
 
