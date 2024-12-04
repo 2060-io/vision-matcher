@@ -5,7 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { describe, it, before } from 'mocha';
-import app from '../server.js';
+import startServer from '../server.js';
 
 // Utility function to convert a file to base64
 function convertImageToBase64(imagePath) {
@@ -18,8 +18,9 @@ function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-describe('POST /face_match', function () {
+describe('POST /face_match (default configuration)', function () {
   this.timeout(60000); //Timeout of 60 seconds for the model to be loaded
+  let server;
   
   let image1Base64;
   let image2Base64;
@@ -30,9 +31,10 @@ describe('POST /face_match', function () {
   let image3Path;
 
   before((done) => {
+    server = startServer("./server_config.json")
     // Wait until the face_matcher process is ready
     const checkInterval = setInterval(() => {
-      request(app)
+      request(server)
         .post('/face_match')
         .send({})
         .end((err, res) => {
@@ -61,9 +63,20 @@ describe('POST /face_match', function () {
     }
   });
 
+  after((done) => {
+    console.log("!!!!DONE!!!");
+    if (server && server.close) {
+      console.log("CLOSING SERVER");
+      server.close(done);
+    } else {
+      console.log("Just done");
+      done();
+    }
+  });
+
   // Test if image extension is missing
   it('should return 400 if image extension is missing or invalid', function (done) {
-    request(app)
+    request(server)
       .post('/face_match')
       .send({ image1_base64: 'sample_base64_data', image2_base64: 'sample_base64_data' })
       .expect(400, done);
@@ -73,7 +86,7 @@ describe('POST /face_match', function () {
   it('should return 400 if image path does not exist', function (done) {
     const nonExistentPath = './non_existent_image.jpg';
 
-    request(app)
+    request(server)
       .post('/face_match')
       .send({ image1_path: nonExistentPath, image2_path: nonExistentPath })
       .expect(400, done);
@@ -81,7 +94,7 @@ describe('POST /face_match', function () {
 
   // Test using the base64 images
   it('should perform a valid face match with two images', function (done) {
-    request(app)
+    request(server)
       .post('/face_match')
       .send({
         image1_base64: image1Base64,
@@ -99,7 +112,7 @@ describe('POST /face_match', function () {
 
   // Test with images of the same person in base64
   it('should perform a valid face match with image1 and image2 (distance < 0.4)', function (done) {
-    request(app)
+    request(server)
       .post('/face_match')
       .send({
         image1_base64: image1Base64,
@@ -119,7 +132,7 @@ describe('POST /face_match', function () {
 
   // Test images of different people base64
   it('should perform a valid face match with image1 and image3 (distance > 0.4)', function (done) {
-    request(app)
+    request(server)
       .post('/face_match')
       .send({
         image1_base64: image1Base64,
@@ -139,7 +152,7 @@ describe('POST /face_match', function () {
 
   // Test with image paths of the same person
   it('should perform a valid face match with image1_path and image2_path (distance < 0.4)', function (done) {
-    request(app)
+    request(server)
       .post('/face_match')
       .send({ image1_path: image1Path, image2_path: image2Path })
       .expect(200)
@@ -154,7 +167,7 @@ describe('POST /face_match', function () {
 
   // Test with image paths of the diferent people
   it('should perform a valid face match with image1_path and image2_path (distance < 0.4)', function (done) {
-    request(app)
+    request(server)
       .post('/face_match')
       .send({ image1_path: image1Path, image2_path: image3Path })
       .expect(200)
@@ -186,7 +199,7 @@ describe('POST /face_match', function () {
         delay(i * 50).then(async () => {
           const startTime = Date.now();
 
-          await request(app)
+          await request(server)
             .post('/face_match')
             .send({
               image1_base64: requests[i].image1_base64,
@@ -217,5 +230,168 @@ describe('POST /face_match', function () {
 
     // Execute all requests in parallel
     await Promise.all(tasks);
+  });
+});
+
+describe('POST /face_match (eucledian distance configuration)', function () {
+  this.timeout(60000); //Timeout of 60 seconds for the model to be loaded
+  let server;
+  
+  let image1Base64;
+  let image2Base64;
+  let image3Base64;
+
+  let image1Path;
+  let image2Path;
+  let image3Path;
+
+  before((done) => {
+    server = startServer("./test/euclidean_config.json")
+    // Wait until the face_matcher process is ready
+    const checkInterval = setInterval(() => {
+      request(server)
+        .post('/face_match')
+        .send({})
+        .end((err, res) => {
+          if (res.status !== 503) {
+            clearInterval(checkInterval);
+            done();
+          }
+        });
+    }, 100);
+
+    // Convert images to base64
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = path.dirname(__filename);
+
+    image1Path = path.join(__dirname, 'assets/angelina1.jpeg');
+    image2Path = path.join(__dirname, 'assets/angelina2.jpeg');
+    image3Path = path.join(__dirname, 'assets/salma.jpeg');
+
+    try {
+      image1Base64 = convertImageToBase64(image1Path);
+      image2Base64 = convertImageToBase64(image2Path);
+      image3Base64 = convertImageToBase64(image3Path);
+    } catch (err) {
+      console.error("Error reading images:", err);
+      done(err);
+    }
+  });
+
+  after((done) => {
+    console.log("!!!!DONE!!!");
+    if (server && server.close) {
+      console.log("CLOSING SERVER");
+      server.close(done);
+    } else {
+      console.log("Just done");
+      done();
+    }
+  });
+
+  // Test if image extension is missing
+  it('should return 400 if image extension is missing or invalid', function (done) {
+    request(server)
+      .post('/face_match')
+      .send({ image1_base64: 'sample_base64_data', image2_base64: 'sample_base64_data' })
+      .expect(400, done);
+  });
+
+  // Test if image path does not exists
+  it('should return 400 if image path does not exist', function (done) {
+    const nonExistentPath = './non_existent_image.jpg';
+
+    request(server)
+      .post('/face_match')
+      .send({ image1_path: nonExistentPath, image2_path: nonExistentPath })
+      .expect(400, done);
+  });
+
+  // Test using the base64 images
+  it('should perform a valid face match with two images', function (done) {
+    request(server)
+      .post('/face_match')
+      .send({
+        image1_base64: image1Base64,
+        image2_base64: image2Base64,
+        image1Base64Extension: 'jpeg',
+        image2Base64Extension: 'jpeg'
+      })
+      .expect(200)
+      .end((err, res) => {
+        if (err) return done(err);
+        // Additional assertions can be made on res.body
+        done();
+      });
+  });
+
+  // Test with images of the same person in base64
+  it('should perform a valid face match with image1 and image2 (distance < 0.6)', function (done) {
+    request(server)
+      .post('/face_match')
+      .send({
+        image1_base64: image1Base64,
+        image2_base64: image2Base64,
+        image1Base64Extension: 'jpeg',
+        image2Base64Extension: 'jpeg'
+      })
+      .expect(200)
+      .end((err, res) => {
+        if (err) return done(err);
+        expect(res.body).to.have.property('distance').that.is.lessThan(0.6);
+        expect(res.body).to.have.property('requestId').that.is.a('number');
+        expect(res.body).to.have.property('match').that.is.true;
+        done();
+      });
+  });
+
+  // Test images of different people base64
+  it('should perform a valid face match with image1 and image3 (distance > 0.6)', function (done) {
+    request(server)
+      .post('/face_match')
+      .send({
+        image1_base64: image1Base64,
+        image2_base64: image3Base64,
+        image1Base64Extension: 'jpeg',
+        image2Base64Extension: 'jpeg'
+      })
+      .expect(200)
+      .end((err, res) => {
+        if (err) return done(err);
+        expect(res.body).to.have.property('distance').that.is.greaterThan(0.6);
+        expect(res.body).to.have.property('requestId').that.is.a('number');
+        expect(res.body).to.have.property('match').that.is.false;
+        done();
+      });
+  });
+
+  // Test with image paths of the same person
+  it('should perform a valid face match with image1_path and image2_path (distance < 0.6)', function (done) {
+    request(server)
+      .post('/face_match')
+      .send({ image1_path: image1Path, image2_path: image2Path })
+      .expect(200)
+      .end((err, res) => {
+        if (err) return done(err);
+        expect(res.body).to.have.property('distance').that.is.lessThan(0.6);
+        expect(res.body).to.have.property('requestId').that.is.a('number');
+        expect(res.body).to.have.property('match').that.is.true;
+        done();
+      });
+  });
+
+  // Test with image paths of the diferent people
+  it('should perform a valid face match with image1_path and image2_path (distance > 0.6)', function (done) {
+    request(server)
+      .post('/face_match')
+      .send({ image1_path: image1Path, image2_path: image3Path })
+      .expect(200)
+      .end((err, res) => {
+        if (err) return done(err);
+        expect(res.body).to.have.property('distance').that.is.greaterThan(0.6);
+        expect(res.body).to.have.property('requestId').that.is.a('number');
+        expect(res.body).to.have.property('match').that.is.false;
+        done();
+      });
   });
 });

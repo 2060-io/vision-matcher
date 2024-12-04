@@ -1,3 +1,3 @@
 #!/bin/bash
 
-npx mocha test/faceMatchEndpoint.test.mjs 
+npx mocha --exit test/faceMatchEndpoint.test.mjs 
