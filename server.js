@@ -3,6 +3,20 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const async = require('async');
+const axios = require('axios');
+const path = require('path');
+const { URL } = require('url');
+
+
+async function downloadImage(url, filePath) {
+    const response = await axios.get(url, { responseType: 'arraybuffer' });
+    fs.writeFileSync(filePath, response.data);
+}
+
+function isDataUrl(url) {
+    return url.startsWith('data:image');
+}
+
 
 // Function to create and configure the express application
 function createApp(config) {
@@ -108,64 +122,63 @@ function createApp(config) {
         console.log('All tasks have been processed.');
     });
 
+    
     // Define the /face_match endpoint
-    app.post('/face_match', (req, res) => {
+    app.post('/face_match', async (req, res) => {
         if (!isReady) {
             return res.status(503).send('Service is not ready yet.');
         }
-
         const requestId = Date.now();
-        const image1Base64 = req.body.image1_base64;
-        const image2Base64 = req.body.image2_base64;
-        const image1Path = req.body.image1_path;
-        const image2Path = req.body.image2_path;
-        const image1Base64Extension = req.body.image1Base64Extension;
-        const image2Base64Extension = req.body.image2Base64Extension;
-
-        // Validate image extensions
-        if (image1Base64 && (!image1Base64Extension || !["jpg", "jpeg", "png", "jp2"].includes(image1Base64Extension))) {
-            return res.status(400).send("Image 1 base64 extension is missing or invalid.");
-        }
-
-        if (image2Base64 && (!image2Base64Extension || !["jpg", "jpeg", "png", "jp2"].includes(image2Base64Extension))) {
-            return res.status(400).send("Image 2 base64 extension is missing or invalid.");
-        }
-
-        const tempImage1Path = `./temp_img1_${requestId}.${image1Base64Extension}`;
-        const tempImage2Path = `./temp_img2_${requestId}.${image2Base64Extension}`;
-
+        let image1Url = req.body.image1_url; // Assume these fields are provided now
+        let image2Url = req.body.image2_url;
+    
+        const tempImage1Path = `./temp_img1_${requestId}.jpg`; // Default extension, can be modified
+        const tempImage2Path = `./temp_img2_${requestId}.jpg`;
+    
         try {
             let image1Exists = false;
             let image2Exists = false;
-
-            if (image1Path) {
-                if (fs.existsSync(image1Path)) {
-                    fs.copyFileSync(image1Path, tempImage1Path);
+    
+            // Process Image 1
+            if (image1Url) {
+                const imageUrl = new URL(image1Url);
+                if (imageUrl.protocol.startsWith('http')) {
+                    await downloadImage(image1Url, tempImage1Path);
+                    image1Exists = true;
+                } else if (imageUrl.protocol === 'file:') {
+                    fs.copyFileSync(imageUrl.pathname, tempImage1Path);
+                    image1Exists = true;
+                } else if (isDataUrl(image1Url)) {
+                    const base64Data = image1Url.replace(/^data:image\/\w+;base64,/, '');
+                    fs.writeFileSync(tempImage1Path, base64Data, 'base64');
                     image1Exists = true;
                 } else {
-                    throw new Error('Image 1 path does not exist.');
+                    throw new Error('Unsupported URL protocol for Image 1.');
                 }
-            } else if (image1Base64) {
-                fs.writeFileSync(tempImage1Path, image1Base64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
-                image1Exists = true;
             }
-
-            if (image2Path) {
-                if (fs.existsSync(image2Path)) {
-                    fs.copyFileSync(image2Path, tempImage2Path);
+    
+            // Process Image 2
+            if (image2Url) {
+                const imageUrl = new URL(image2Url);
+                if (imageUrl.protocol.startsWith('http')) {
+                    await downloadImage(image2Url, tempImage2Path);
+                    image2Exists = true;
+                } else if (imageUrl.protocol === 'file:') {
+                    fs.copyFileSync(imageUrl.pathname, tempImage2Path);
+                    image2Exists = true;
+                } else if (isDataUrl(image2Url)) {
+                    const base64Data = image2Url.replace(/^data:image\/\w+;base64,/, '');
+                    fs.writeFileSync(tempImage2Path, base64Data, 'base64');
                     image2Exists = true;
                 } else {
-                    throw new Error('Image 2 path does not exist.');
+                    throw new Error('Unsupported URL protocol for Image 2.');
                 }
-            } else if (image2Base64) {
-                fs.writeFileSync(tempImage2Path, image2Base64.replace(/^data:image\/\w+;base64,/, ''), 'base64');
-                image2Exists = true;
             }
-
+    
             if (!image1Exists || !image2Exists) {
                 throw new Error('Both images are required.');
             }
-
+    
             queue.push({ req, res, tempImage1Path, tempImage2Path, requestId }, (err) => {
                 if (err) {
                     res.status(500).send('Failed to process the face match request.');
