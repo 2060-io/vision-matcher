@@ -16,6 +16,7 @@ Vision Matcher is a project that provides a face matching utility. It includes a
     - [Building the Docker Image](#building-the-docker-image)
     - [Running the Docker Container](#running-the-docker-container)
   - [Usage](#usage)
+  - [Testing the Application](#testing-the-application)
   - [License](#license)
   - [Additional Information](#additional-information)
 
@@ -102,6 +103,21 @@ This will start the Node.js server within a Docker container and expose it on po
 ## Usage
 
 Once the server is running (either natively or in a Docker container), you can send HTTP requests to the `/face_match` endpoint for face matching operations.
+
+## Testing the Application
+
+To test the face matching functionality, you can use a tool like `curl` to send a POST request to the `/face_match` endpoint. Here's an example:
+
+```bash
+curl -X POST http://localhost:5123/face_match \
+        -H "Content-Type: application/json" \
+        -d '{
+            "image1_url": "file:/home/path/to/vision-matcher/test/assets/angelina1.jpeg",
+            "image2_url": "file:/home/path/to/vision-matcher/test/assets/angelina2.jpeg"
+            }'
+```
+
+This command sends a request with two image URLs to compare, and the server responds with the result of the face matching operation.
 
 ## License
 
