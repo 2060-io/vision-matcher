@@ -70,13 +70,3 @@ jobs:
           docker tag $DH_USERNAME/$IMAGE_NAME:$RELEASE_VERSION $DH_USERNAME/$IMAGE_NAME:latest
           docker push $DH_USERNAME/$IMAGE_NAME:$RELEASE_VERSION
           docker push $DH_USERNAME/$IMAGE_NAME:latest
-
-      - name: Log in to GitHub Container Registry (GHCR)
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
-
-      - name: Push Docker Image to GHCR
-        run: |
-          docker tag $DH_USERNAME/$IMAGE_NAME:$RELEASE_VERSION ghcr.io/$GITHUB_REPOSITORY:$RELEASE_VERSION
-          docker tag $DH_USERNAME/$IMAGE_NAME:$RELEASE_VERSION ghcr.io/$GITHUB_REPOSITORY:latest
-          docker push ghcr.io/$GITHUB_REPOSITORY:$RELEASE_VERSION
-          docker push ghcr.io/$GITHUB_REPOSITORY:latest
