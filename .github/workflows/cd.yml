@@ -52,7 +52,7 @@ jobs:
           if [[ "${{ needs.release.outputs.release_created }}" == "true" ]]; then
             echo "RELEASE_VERSION=${{ needs.release.outputs.tag_name }}" >> $GITHUB_ENV
           else
-            LAST_TAG=$(git describe --tags --abbrev=0 || echo "latest")
+            LAST_TAG=$(git tag --sort=-v:refname | head -n 1)
             echo "RELEASE_VERSION=$LAST_TAG" >> $GITHUB_ENV
           fi
 
