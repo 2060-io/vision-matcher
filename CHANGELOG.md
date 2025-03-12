@@ -6,6 +6,14 @@
 ### Miscellaneous Chores
 
 * release 1.0.0 ([6a159b9](https://github.com/2060-io/vision-matcher/commit/6a159b9658a26d03db89770d8ae80652b57e8e93))
+* trigger release ([f7ee639](https://github.com/2060-io/vision-matcher/commit/f7ee6397bd3ad8683374925dfd16e9fe14e22a12))
+
+## [1.0.0](https://github.com/2060-io/vision-matcher/compare/v1.0.0...v1.0.0) (2025-03-12)
+
+
+### Miscellaneous Chores
+
+* release 1.0.0 ([6a159b9](https://github.com/2060-io/vision-matcher/commit/6a159b9658a26d03db89770d8ae80652b57e8e93))
 
 ## [1.0.0](https://github.com/2060-io/vision-matcher/compare/v1.0.0...v1.0.0) (2025-03-12)
 
