@@ -20,7 +20,7 @@ RUN npm install
 COPY . .
 
 # Run your build script to compile the C++ application
-RUN chmod +x ./gpp_build_face_matcher.sh && ./gpp_build_face_matcher.sh
+RUN cd face_matcher && ls -l && chmod +x gpp_build_face_matcher.sh && ./gpp_build_face_matcher.sh
 
 # Expose the port your application listens on
 EXPOSE 5123
