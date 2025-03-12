@@ -2,99 +2,65 @@ name: Continuous Deployment
 
 on:
   push:
-    branches: [main, 'release/**']
+    branches:
+      - main
+      - 'release/**'
   workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
 
 env:
   DH_USERNAME: ${{ secrets.DOCKER_HUB_LOGIN }}
   DH_TOKEN: ${{ secrets.DOCKER_HUB_PWD }}
   IMAGE_NAME: 'vision-matcher'
-  IMAGE_TAG: ${{ github.ref_name == 'main' && 'dev' || github.ref_name }}
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Run Release Please
+        id: release
+        uses: GoogleCloudPlatform/release-please-action@v3
         with:
-          node-version: 20
+          release-type: node
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Install dependencies
-        run: npm install
+  build-and-push:
+    needs: release
+    if: needs.release.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
 
-      - name: Run Semantic Release
-        id: semantic
-        uses: codfish/semantic-release-action@v3
-        with:
-          branches: |
-            [
-              'release',
-              { 
-                name: 'main',
-                prerelease: 'dev'
-              }
-            ]
-          plugins: |
-            [
-              [
-                "@semantic-release/commit-analyzer",
-                {
-                  "preset": "angular",
-                  "releaseRules": [
-                    {
-                      "type": "refactor",
-                      "release": "patch"
-                    }
-                  ]
-                }
-              ],
-              [
-                "@semantic-release/npm",
-                {
-                  "npmPublish": false
-                }
-              ],
-              "@semantic-release/release-notes-generator"
-            ]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-      - name: Extract version numbers
-        if: steps.semantic.outputs.new-release-published == 'true'
-        run: |
-          VERSION=${{ steps.semantic.outputs.new-release-version }}
-          echo "RELEASE_MAJOR=$(echo $VERSION | cut -d. -f1)" >> $GITHUB_ENV
-          echo "RELEASE_MINOR=$(echo $VERSION | cut -d. -f2)" >> $GITHUB_ENV
-          echo "RELEASE_PATCH=$(echo $VERSION | cut -d. -f3)" >> $GITHUB_ENV
+      - name: Extract Version from Release
+        run: echo "RELEASE_VERSION=${{ needs.release.outputs.tag_name }}" >> $GITHUB_ENV
 
       - name: Log in to Docker Hub
-        if: steps.semantic.outputs.new-release-published == 'true'
         run: echo "$DH_TOKEN" | docker login -u "$DH_USERNAME" --password-stdin
 
-      - name: Build Docker image
-        if: steps.semantic.outputs.new-release-published == 'true'
-        run: docker build -f Dockerfile -t $DH_USERNAME/$IMAGE_NAME:$IMAGE_TAG .
+      - name: Build Docker Image
+        run: docker build -f Dockerfile -t $DH_USERNAME/$IMAGE_NAME:$RELEASE_VERSION .
 
       - name: Push Docker Image to Docker Hub
-        if: steps.semantic.outputs.new-release-published == 'true'
         run: |
-          docker tag $DH_USERNAME/$IMAGE_NAME:$IMAGE_TAG $DH_USERNAME/$IMAGE_NAME:v$RELEASE_MAJOR
-          docker tag $DH_USERNAME/$IMAGE_NAME:$IMAGE_TAG $DH_USERNAME/$IMAGE_NAME:v$RELEASE_MAJOR.$RELEASE_MINOR
-          docker tag $DH_USERNAME/$IMAGE_NAME:$IMAGE_TAG $DH_USERNAME/$IMAGE_NAME:v$RELEASE_MAJOR.$RELEASE_MINOR.$RELEASE_PATCH
-          docker push $DH_USERNAME/$IMAGE_NAME:$IMAGE_TAG
-          docker push $DH_USERNAME/$IMAGE_NAME:v$RELEASE_MAJOR
-          docker push $DH_USERNAME/$IMAGE_NAME:v$RELEASE_MAJOR.$RELEASE_MINOR
-          docker push $DH_USERNAME/$IMAGE_NAME:v$RELEASE_MAJOR.$RELEASE_MINOR.$RELEASE_PATCH
+          docker tag $DH_USERNAME/$IMAGE_NAME:$RELEASE_VERSION $DH_USERNAME/$IMAGE_NAME:latest
+          docker push $DH_USERNAME/$IMAGE_NAME:$RELEASE_VERSION
+          docker push $DH_USERNAME/$IMAGE_NAME:latest
 
       - name: Log in to GitHub Container Registry (GHCR)
-        if: steps.semantic.outputs.new-release-published == 'true'
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
 
       - name: Push Docker Image to GHCR
-        if: steps.semantic.outputs.new-release-published == 'true'
         run: |
-          docker tag $DH_USERNAME/$IMAGE_NAME:$IMAGE_TAG ghcr.io/$GITHUB_REPOSITORY:$IMAGE_TAG
-          docker push ghcr.io/$GITHUB_REPOSITORY:$IMAGE_TAG
+          docker tag $DH_USERNAME/$IMAGE_NAME:$RELEASE_VERSION ghcr.io/$GITHUB_REPOSITORY:$RELEASE_VERSION
+          docker tag $DH_USERNAME/$IMAGE_NAME:$RELEASE_VERSION ghcr.io/$GITHUB_REPOSITORY:latest
+          docker push ghcr.io/$GITHUB_REPOSITORY:$RELEASE_VERSION
+          docker push ghcr.io/$GITHUB_REPOSITORY:latest
