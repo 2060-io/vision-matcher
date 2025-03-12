@@ -46,6 +46,9 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with: 
+          fetch-depth: 0  
+          fetch-tags: true
 
       - name: Extract Version from Release or Git Tags
         run: |
