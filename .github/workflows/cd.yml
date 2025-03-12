@@ -6,6 +6,11 @@ on:
       - main
       - 'release/**'
   workflow_dispatch:
+    inputs:
+      force_build:
+        description: 'Force build and push'
+        required: false
+        default: 'false'
 
 permissions:
   contents: write
@@ -35,15 +40,24 @@ jobs:
 
   build-and-push:
     needs: release
-    if: needs.release.outputs.release_created == 'true'
+    if: needs.release.outputs.release_created == 'true' || github.event.inputs.force_build == 'true'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Extract Version from Release
-        run: echo "RELEASE_VERSION=${{ needs.release.outputs.tag_name }}" >> $GITHUB_ENV
+      - name: Extract Version from Release or Git Tags
+        run: |
+          if [[ "${{ needs.release.outputs.release_created }}" == "true" ]]; then
+            echo "RELEASE_VERSION=${{ needs.release.outputs.tag_name }}" >> $GITHUB_ENV
+          else
+            LAST_TAG=$(git describe --tags --abbrev=0 || echo "latest")
+            echo "RELEASE_VERSION=$LAST_TAG" >> $GITHUB_ENV
+          fi
+
+      - name: Display Release Version
+        run: echo "Building version $RELEASE_VERSION (force_build=${{ github.event.inputs.force_build }})"
 
       - name: Log in to Docker Hub
         run: echo "$DH_TOKEN" | docker login -u "$DH_USERNAME" --password-stdin
