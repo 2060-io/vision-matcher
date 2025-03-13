@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/2060-io/vision-matcher/compare/v1.0.0...v1.1.0) (2025-03-13)
+
+
+### Features
+
+* Change Release-Please version googleapis/release-please-action@v4 ([093ec36](https://github.com/2060-io/vision-matcher/commit/093ec364587e3b0eff73ecd04dbd93da9f046c45))
+
 ## [1.0.0](https://github.com/2060-io/vision-matcher/compare/v1.0.0...v1.0.0) (2025-03-12)
 
 
