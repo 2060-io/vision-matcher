@@ -19,6 +19,9 @@ RUN npm install
 # Copy the rest of the application files
 COPY . .
 
+# Run your download face-match model
+RUN ls -l && chmod +x download_face_match_model.sh && ./download_face_match_model.sh
+
 # Run your build script to compile the C++ application
 RUN cd face_matcher && ls -l && chmod +x gpp_build_face_matcher.sh && ./gpp_build_face_matcher.sh
 
