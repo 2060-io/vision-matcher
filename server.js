@@ -100,13 +100,14 @@ function createApp(config) {
                 } catch (err) {
                     console.error('Error parsing output:', err);
                     res.status(500).send('Error processing face match result.');
-                }
+                } finally {
 
                 // Cleanup temporary files
                 fs.unlinkSync(tempImage1Path);
                 fs.unlinkSync(tempImage2Path);
 
                 callback(); // Notify queue that the task is complete
+                }
             }
         };
 
