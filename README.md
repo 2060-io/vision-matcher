@@ -70,14 +70,17 @@ The Node.js server uses the `face_matcher` binary to handle HTTP requests for fa
 
 ### Setting up the Server
 
-1. Ensure you have Node.js and npm installed.
+1. Ensure you have Node.js (<18) and npm installed.
 2. Install the necessary dependencies:
 
     ```bash
     npm install
     ```
-
-3. Start the server:
+3. Download the face match model
+   ```bash
+   ./download_face_match_model.sh
+   ```
+4. Start the server:
 
     ```bash
     node server.js
