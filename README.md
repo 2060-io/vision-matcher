@@ -41,7 +41,12 @@ Vision Matcher is a project that provides a face matching utility. It includes a
 
 ## Building the Face Matcher Binary
 
-To build the `face_matcher` binary, navigate to the `face_matcher` directory and run one of the provided shell scripts (Note: OpenCV should be previously installed):
+Face Matcher requires OpenCV. Therefore, before trying to build it, you'll need to install it:
+
+- Debian: install package libopencv
+- Arch: install packages opencv, hdf5 and vtk
+
+To build the `face_matcher` binary, navigate to the `face_matcher` directory and run one of the provided shell scripts:
 
 ### Using CMake
 
