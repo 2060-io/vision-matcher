@@ -66,12 +66,15 @@ function createApp(config) {
 
     // Async queue to handle requests sequentially (concurrency = 1)
     const queue = async.queue((task, callback) => {
-        const { req, res, tempImage1Path, tempImage2Path, requestId } = task;
+        const { tempImage1Path, tempImage2Path, requestId } = task;
 
+        console.log(`Start task for requestId: ${requestId}`)
         // Write request data to the face matcher process
         cppProcess.stdin.write(`${requestId},${tempImage1Path},${tempImage2Path}\n`);
 
         let output = '';
+        let error;
+        let result;
         const dataListener = (data) => {
             output += data.toString();
             if (output.includes('\n')) {
@@ -88,25 +91,26 @@ function createApp(config) {
 
                         // Check if requestId matches
                         if (responseRequestId === requestId) {
-                            res.send({ match: responseMatch, distance: distance, requestId: responseRequestId });
+                            result = { match: responseMatch, distance: distance, requestId: responseRequestId }
                         } else {
                             console.error('Mismatched requestId:', { expected: requestId, received: responseRequestId });
-                            res.status(500).send('Mismatched requestId in face matching process.');
+                            error = 'Mismatched requestId in face matching process.';
                         }
                     } else {
                         console.error('Unexpected output format:', output.trim());
-                        res.status(500).send('Error in face matching process: ' + output.trim());
+                        error = 'Error in face matching process: ' + output.trim();
                     }
                 } catch (err) {
                     console.error('Error parsing output:', err);
-                    res.status(500).send('Error processing face match result.');
-                }
+                    error = 'Error processing face match result.';
+                } finally {
 
                 // Cleanup temporary files
                 fs.unlinkSync(tempImage1Path);
                 fs.unlinkSync(tempImage2Path);
 
-                callback(); // Notify queue that the task is complete
+                callback(result, error); // Notify queue that the task is complete
+                }
             }
         };
 
@@ -125,6 +129,7 @@ function createApp(config) {
     
     // Define the /face_match endpoint
     app.post('/face_match', async (req, res) => {
+        console.log(`face_match. Body: ${JSON.stringify(req.body)}`)
         if (!isReady) {
             return res.status(503).send('Service is not ready yet.');
         }
@@ -179,9 +184,11 @@ function createApp(config) {
                 throw new Error('Both images are required.');
             }
     
-            queue.push({ req, res, tempImage1Path, tempImage2Path, requestId }, (err) => {
+            queue.push({ req, res, tempImage1Path, tempImage2Path, requestId }, (result, err) => {
                 if (err) {
                     res.status(500).send('Failed to process the face match request.');
+                } else {
+                    res.send(result).end()
                 }
             });
 
