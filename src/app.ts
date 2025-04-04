@@ -91,13 +91,13 @@ export function createApp(): Application {
         } catch (err) {
           console.error('Error parsing output:', err)
           res.status(500).json({ error: 'Error processing face match result.' })
+        } finally {
+          // Cleanup temporary images
+          fs.unlinkSync(tempImage1Path)
+          fs.unlinkSync(tempImage2Path)
+
+          callback()
         }
-
-        // Cleanup temporary images
-        fs.unlinkSync(tempImage1Path)
-        fs.unlinkSync(tempImage2Path)
-
-        callback()
       }
     }
 
