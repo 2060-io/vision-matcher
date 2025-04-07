@@ -48,7 +48,6 @@ RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
 
 # Copy config, model files, and face matcher binary
-COPY --from=builder /app/server_config.json .
 COPY --from=builder /app/haarcascade_frontalface_default.xml .
 COPY --from=builder /app/face_matcher_model.onnx .
 COPY --from=builder /app/face_matcher/bin ./face_matcher/bin
