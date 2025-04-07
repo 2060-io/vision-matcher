@@ -74,9 +74,9 @@ The Node.js server uses the `face_matcher` binary to handle HTTP requests for fa
 1. Ensure you have Node.js (<18) and npm installed.
 2. Install the necessary dependencies:
 
-    ```bash
-    npm install
-    ```
+   ```bash
+   npm install
+   ```
 
 3. Start the server:
 

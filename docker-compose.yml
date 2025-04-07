@@ -2,10 +2,8 @@ version: '3.9'
 
 services:
   vision-matcher:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: runtime
+    build: .
+    image: message-pickup-repository:test
     container_name: vision-matcher
     ports:
       - '5123:5123'

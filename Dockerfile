@@ -1,4 +1,4 @@
-FROM node:20-bookworm-slim AS builder
+FROM node:22-bookworm-slim AS builder
 
 # Install necessary build tools and OpenCV
 RUN apt-get update && apt-get install -y \
