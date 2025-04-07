@@ -1,5 +1,3 @@
-import { Request, Response } from 'express'
-
 /**
  * Configuration used to launch the native **face_matcher** binary.
  *

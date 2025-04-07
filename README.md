@@ -23,6 +23,7 @@ Vision Matcher is a project that provides a face matching utility. It includes a
 ## Project Structure
 
 - `face_matcher/`: Contains the C++ source code for the face matching binary application.
+
   - `bin/`: Directory where the compiled `face_matcher` binary will be placed.
   - `include/`: Header files for the face matcher source code.
   - `src/`: C++ source files implementing the face matcher functionality.
@@ -76,15 +77,12 @@ The Node.js server uses the `face_matcher` binary to handle HTTP requests for fa
     ```bash
     npm install
     ```
-3. Download the face match model
-   ```bash
-   ./download_face_match_model.sh
-   ```
-4. Start the server:
 
-    ```bash
-    node server.js
-    ```
+3. Start the server:
+
+   ```bash
+   node server.js
+   ```
 
 ## Docker
 

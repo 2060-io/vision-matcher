@@ -10,8 +10,6 @@ import { log, warn, error } from './utils/logger'
 
 export function createApp(): Application {
   const app = express()
-  const port = 5123
-
   // 1. Start / monitor C++ matcher
   let cppProcess: ChildProcessWithoutNullStreams
   let isReady = false
@@ -95,7 +93,7 @@ export function createApp(): Application {
   }
 
   // 4. /face_match route
-  app.post('/face_match', async (req: Request<{}, {}, FaceMatchRequest>, res: Response): Promise<void> => {
+  app.post('/face_match', async (req: Request<FaceMatchRequest>, res: Response): Promise<void> => {
     if (!isReady) {
       warn('Matcher not ready – 503')
       res.status(503).json({ error: 'Service not ready' })
