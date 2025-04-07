@@ -3,162 +3,132 @@ import bodyParser from 'body-parser'
 import async from 'async'
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process'
 import fs from 'fs'
-import { downloadImage, isDataUrl, cleanUpFiles, processImage } from './utils/imagesProcessor'
+import { processImage, cleanUpFiles } from './utils/imagesProcessor'
 import config from './config'
 import { FaceMatchRequest, FaceMatchResponse, Task } from './interfaces'
+import { log, warn, error } from './utils/logger'
 
 export function createApp(): Application {
   const app = express()
-  const port = 5123 // Default port
+  const port = 5123
 
+  // 1. Start / monitor C++ matcher
   let cppProcess: ChildProcessWithoutNullStreams
   let isReady = false
 
-  // Start the Face Matcher process
   function startFaceMatcher() {
-    console.log('Starting face_matcher process...')
-    const args = Object.entries(config.arguments).flatMap(([key, value]) => [`-${key}`, value])
+    log('Starting face_matcher process…')
+    const args = Object.entries(config.arguments).flatMap(([k, v]) => [`-${k}`, v])
     cppProcess = spawn(config.executablePath, args)
 
     isReady = false
 
-    cppProcess.on('error', (error) => {
-      console.error('Error in face_matcher process:', error)
-    })
+    cppProcess.on('error', (err) => error('face_matcher error:', err))
 
-    cppProcess.on('exit', (code, signal) => {
-      console.error('face_matcher process exited with code:', code, 'and signal:', signal)
+    cppProcess.on('exit', (code, sig) => {
+      error(`face_matcher exited (code=${code}, signal=${sig}) – restarting`)
       isReady = false
-      setTimeout(startFaceMatcher, 1000)
+      setTimeout(startFaceMatcher, 1_000)
     })
 
-    cppProcess.stdout.on('data', (data) => {
-      const output = data.toString()
-      console.log('<<face_matcher output>>:', output)
-
-      if (output.includes('--READY--')) {
-        console.log('face_matcher process is ready.')
+    cppProcess.stdout.on('data', (buf) => {
+      const out = buf.toString().trim()
+      log('<<face_matcher>>', out)
+      if (out.includes('--READY--')) {
         isReady = true
+        log('face_matcher READY')
       }
     })
   }
-
-  // Initialize matcher
   startFaceMatcher()
 
-  // Middlewares
+  //2. Middleware
   app.use(bodyParser.json({ limit: '50mb' }))
+  log('Express JSON body‑parser registered')
 
-  // Create the queue
-  const queue = async.queue((task: Task, callback) => {
-    const { res, tempImage1Path, tempImage2Path, requestId } = task
+  //3. Async queue
+  const queue = async.queue<Task>((task, cb) => {
+    const { tempImage1Path, tempImage2Path, requestId, resolve, reject } = task
+    log(`[Queue] → matcher  id=${requestId}`)
 
-    // Write to stdin for the C++ process
     cppProcess.stdin.write(`${requestId},${tempImage1Path},${tempImage2Path}\n`)
 
     let output = ''
-
-    // Data listener
-    const dataListener = (data: Buffer) => {
-      output += data.toString()
+    const listener = (buf: Buffer) => {
+      output += buf.toString()
       if (output.includes('\n')) {
-        cleanUp()
+        cppProcess.stdout.off('data', listener)
+        log(`[Queue] ← matcher  id=${requestId}`)
 
         try {
-          const match = output.trim().match(/Response: {distance:(-?\d+(\.\d+)?), requestId:(\d+), match:(true|false)}/)
+          const m = output.trim().match(/Response: {distance:(-?\d+(\.\d+)?), requestId:(\d+), match:(true|false)}/)
+          if (!m) throw new Error('Regex mismatch')
 
-          if (match) {
-            const distance = parseFloat(match[1])
-            const responseRequestId = parseInt(match[3], 10)
-            const responseMatch = match[4] === 'true'
+          const resId = Number(m[3])
+          if (resId !== requestId) throw new Error('Mismatched requestId')
 
-            const response: FaceMatchResponse = {
-              match: responseMatch,
-              distance,
-              requestId: responseRequestId,
-            }
-
-            if (responseRequestId === requestId) {
-              res.json(response)
-            } else {
-              console.error('Mismatched requestId:', { expected: requestId, received: responseRequestId })
-              res.status(500).json({ error: 'Mismatched requestId in face matching process.' })
-            }
-          } else {
-            console.error('Unexpected output format:', output.trim())
-            res.status(500).json({ error: 'Error in face matching process.' })
+          const response: FaceMatchResponse = {
+            match: m[4] === 'true',
+            distance: parseFloat(m[1]),
+            requestId: resId,
           }
+          resolve(response)
         } catch (err) {
-          console.error('Error parsing output:', err)
-          res.status(500).json({ error: 'Error processing face match result.' })
+          reject(err as Error)
         } finally {
-          // Cleanup temporary images
           fs.unlinkSync(tempImage1Path)
           fs.unlinkSync(tempImage2Path)
-
-          callback()
+          cb()
         }
       }
     }
-
-    function cleanUp() {
-      cppProcess.stdout.off('data', dataListener)
-    }
-
-    cppProcess.stdout.on('data', dataListener)
+    cppProcess.stdout.on('data', listener)
   }, 1)
 
-  // When all tasks are done
-  queue.drain(() => {
-    console.log('All tasks have been processed.')
-  })
+  queue.drain(() => log('[Queue] All tasks drained'))
 
-  // Face Match endpoint
+  /// Enqueues a task and returns a Promise with the matcher result.
+  function enqueueMatch(temp1: string, temp2: string, requestId: number): Promise<FaceMatchResponse> {
+    return new Promise((resolve, reject) => {
+      queue.push({ tempImage1Path: temp1, tempImage2Path: temp2, requestId, resolve, reject })
+    })
+  }
+
+  // 4. /face_match route
   app.post('/face_match', async (req: Request<{}, {}, FaceMatchRequest>, res: Response): Promise<void> => {
     if (!isReady) {
-      res.status(503).json({ error: 'Service is not ready yet.' })
+      warn('Matcher not ready – 503')
+      res.status(503).json({ error: 'Service not ready' })
       return
     }
 
     const requestId = Date.now()
     const { image1_url, image2_url } = req.body
+    log('---- NEW REQUEST ----', requestId)
 
     if (!image1_url || !image2_url) {
-      res.status(400).json({ error: 'Both image URLs are required.' })
+      res.status(400).json({ error: 'Both image URLs are required' })
       return
     }
 
-    const tempImage1Path = `./temp_img1_${requestId}.jpg`
-    const tempImage2Path = `./temp_img2_${requestId}.jpg`
-
-    let timeout: NodeJS.Timeout
+    const temp1 = `./temp_img1_${requestId}.jpg`
+    const temp2 = `./temp_img2_${requestId}.jpg`
 
     try {
-      // Download images in parallel
-      await Promise.all([processImage(image1_url, tempImage1Path), processImage(image2_url, tempImage2Path)])
+      log('Downloading / copying images…')
+      await Promise.all([processImage(image1_url, temp1), processImage(image2_url, temp2)])
+      log('Images ready on disk')
 
-      // Push task to the queue
-      queue.push({ res, tempImage1Path, tempImage2Path, requestId }, (err) => {
-        if (err) {
-          console.error('Queue processing error:', err)
-          res.status(500).json({ error: 'Failed to process the face match request.' })
-          cleanUpFiles(tempImage1Path, tempImage2Path)
-        }
-      })
+      const result = await Promise.race([
+        enqueueMatch(temp1, temp2, requestId),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Matcher timeout')), 10_000)),
+      ])
 
-      // Set timeout to handle unresponsive requests (10 seconds)
-      timeout = setTimeout(() => {
-        if (queue.length() > 0) {
-          console.error('Request timed out:', requestId)
-          res.status(504).json({ error: 'Face matching request timed out.' })
-          if (timeout) clearTimeout(timeout)
-        }
-      }, 10000)
-    } catch (error) {
-      console.error('Error downloading images:', error)
-      res.status(500).json({ error: 'Failed to download images.' })
-    } finally {
-      cleanUpFiles(tempImage1Path, tempImage2Path)
+      res.json(result)
+    } catch (err) {
+      error('Face‑match failure:', err)
+      res.status(500).json({ error: (err as Error).message })
+      cleanUpFiles(temp1, temp2)
     }
   })
 

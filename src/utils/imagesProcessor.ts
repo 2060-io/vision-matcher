@@ -1,5 +1,6 @@
 import axios from 'axios'
 import fs from 'fs'
+import { log, warn, error } from './logger'
 
 /**
  * Downloads an image from a given URL and saves it to a local file.
@@ -8,14 +9,14 @@ import fs from 'fs'
  * @param {string} filePath - The path where the image will be saved.
  * @returns {Promise<void>} A promise that resolves when the image has been successfully downloaded.
  */
-export async function downloadImage(url: string, filePath: fs.PathOrFileDescriptor) {
+export async function downloadImage(url: string, filePath: fs.PathOrFileDescriptor): Promise<void> {
   try {
-    console.log(`Starting image download from: ${url}`)
-    const response = await axios.get(url, { responseType: 'arraybuffer' })
-    fs.writeFileSync(filePath, response.data)
-    console.log(`Image successfully saved to: ${filePath}`)
-  } catch (error) {
-    console.error('Error downloading the image:', error)
+    log(`[downloadImage] Starting image download from: ${url}`)
+    const res = await axios.get(url, { responseType: 'arraybuffer' })
+    fs.writeFileSync(filePath, res.data)
+    log(`[downloadImage] ✔ Image successfully saved → ${filePath}`)
+  } catch (err) {
+    error('[downloadImage] Error downloading the image', err)
     throw new Error('Failed to download the image.')
   }
 }
@@ -26,16 +27,27 @@ export async function downloadImage(url: string, filePath: fs.PathOrFileDescript
  * @param {string} url - The URL to check.
  * @returns {boolean} `true` if the URL is a Data URL, `false` otherwise.
  */
-export function isDataUrl(url: string) {
-  const isData = url.startsWith('data:image')
-  console.log(`URL checked: ${url}, isDataUrl: ${isData}`)
-  return isData
+export function isDataUrl(url: string): boolean {
+  const yes = url.startsWith('data:image')
+  log(`[isDataUrl] ${yes ? '✓' : '×'} ${url.slice(0, 40)}…`)
+  return yes
 }
 
-// Define cleanup function in this scope so it is accessible everywhere
-export function cleanUpFiles(tempImage1Path: string, tempImage2Path: string) {
-  if (fs.existsSync(tempImage1Path)) fs.unlinkSync(tempImage1Path)
-  if (fs.existsSync(tempImage2Path)) fs.unlinkSync(tempImage2Path)
+/**
+ * Deletes the two temporary image files if they exist.
+ *
+ * @param p1 Path to the first temporary file.
+ * @param p2 Path to the second temporary file.
+ */
+export function cleanUpFiles(p1: string, p2: string): void {
+  if (fs.existsSync(p1)) {
+    fs.unlinkSync(p1)
+    warn(`[cleanUp] removed ${p1}`)
+  }
+  if (fs.existsSync(p2)) {
+    fs.unlinkSync(p2)
+    warn(`[cleanUp] removed ${p2}`)
+  }
 }
 
 /**
@@ -51,17 +63,20 @@ export async function processImage(url: string, destPath: string): Promise<void>
     const imageUrl = new URL(url)
 
     if (imageUrl.protocol.startsWith('http')) {
+      log(`[processImage] http(s) → ${destPath}`)
       await downloadImage(url, destPath)
     } else if (imageUrl.protocol === 'file:') {
+      log(`[processImage] file:// → ${destPath}`)
       fs.copyFileSync(imageUrl.pathname, destPath)
     } else if (isDataUrl(url)) {
-      const base64Data = url.replace(/^data:image\/\w+;base64,/, '')
-      fs.writeFileSync(destPath, base64Data, 'base64')
+      log(`[processImage] base64 → ${destPath}`)
+      const b64 = url.replace(/^data:image\/\w+;base64,/, '')
+      fs.writeFileSync(destPath, b64, 'base64')
     } else {
-      throw new Error(`Unsupported URL protocol: ${imageUrl.protocol}`)
+      throw new Error(`Unsupported protocol: ${imageUrl.protocol}`)
     }
-  } catch (error) {
-    console.error(`[processImage] Failed to process image from URL: ${url}`)
-    throw new Error('Unable to process image. Please check the URL or format.')
+  } catch (err) {
+    error('[processImage] ❌ Failed to process image from URL:', err)
+    throw new Error('Unable to process image. Check URL or format.')
   }
 }
