@@ -3,16 +3,13 @@ import bodyParser from 'body-parser'
 import async from 'async'
 import { spawn, ChildProcessWithoutNullStreams } from 'child_process'
 import fs from 'fs'
-import { processImage, cleanUpFiles } from './utils/imagesProcessor'
 import config from './config'
 import { FaceMatchRequest, FaceMatchResponse, Task } from './interfaces'
 import { log, warn, error } from './utils/logger'
-import { isImageOverLimit } from './utils/checkImageSize'
+import { cleanUpFiles, processImage } from './utils/imagesProcessor'
 
 export function createApp(): Application {
   const app = express()
-  // Configurable max size (bytes)
-  const maxImagesBytes = parseInt(process.env.MAX_IMAGE_BYTES || '500', 10) || 500
 
   // 1. Start / monitor C++ matcher
   let cppProcess: ChildProcessWithoutNullStreams
@@ -120,13 +117,6 @@ export function createApp(): Application {
       log('Downloading / copying images…')
       await Promise.all([processImage(image1_url, tempImage1Path), processImage(image2_url, tempImage2Path)])
       log('Images ready on disk')
-
-      if (isImageOverLimit(tempImage1Path, maxImagesBytes) || isImageOverLimit(tempImage2Path, maxImagesBytes)) {
-        warn(`[size‑check] img1=${tempImage1Path} KB, img2=${tempImage2Path} KB, limit=${maxImagesBytes} KB`)
-        cleanUpFiles(tempImage1Path, tempImage2Path)
-        res.status(413).json({ error: `Image exceeds ${maxImagesBytes} kb size limit` })
-        return
-      }
 
       const result = await Promise.race([
         enqueueMatch(tempImage1Path, tempImage2Path, requestId),

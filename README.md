@@ -15,8 +15,8 @@ Vision Matcher is a project that provides a face matching utility. It includes a
   - [Docker](#docker)
     - [Building the Docker Image](#building-the-docker-image)
     - [Running the Docker Container](#running-the-docker-container)
+    - [Using Docker Compose](#using-docker-compose)
   - [Usage](#usage)
-  - [Testing the Application](#testing-the-application)
   - [License](#license)
   - [Additional Information](#additional-information)
 
@@ -86,10 +86,9 @@ The Node.js server uses the `face_matcher` binary to handle HTTP requests for fa
 
 ## Environment Variables
 
-| Variable          | Default | Description                             |
-| ----------------- | ------- | --------------------------------------- |
-| `MAX_IMAGE_BYTES` | `500`   | Max allowed image size per file (in KB) |
-| `PORT`            | `5123`  | Port os service                         |
+| Variable | Default | Description     |
+| -------- | ------- | --------------- |
+| `PORT`   | `5123`  | Port os service |
 
 ## Docker
 
