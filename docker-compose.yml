@@ -3,7 +3,7 @@ version: '3.9'
 services:
   vision-matcher:
     build: .
-    image: message-pickup-repository:test
+    image: vision-matcher:test
     container_name: vision-matcher
     ports:
       - '5123:5123'

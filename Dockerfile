@@ -1,59 +1,59 @@
-FROM node:22-bookworm-slim AS builder
-
-# Install necessary build tools and OpenCV
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    pkg-config \
-    libopencv-dev \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
+FROM node:22-bookworm-slim AS base
 WORKDIR /app
+# Enable pnpm via Corepack
+RUN corepack enable
 
-# Copy only package metadata for better layer caching
-COPY package*.json ./
+# Stage 1: builder
 
-# Install dependencies
-RUN npm install
+FROM base AS builder
 
-# Copy the rest of the application source code
+# Build essentials and OpenCV for the C++ matcher
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        pkg-config \
+        libopencv-dev \
+        curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy package metadata first to leverage Docker cache
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+
+# Copy the full source tree
 COPY . .
 
-# Download face matcher model
+# Download the ONNX model and compile the C++ binary
 RUN chmod +x download_face_match_model.sh && ./download_face_match_model.sh
-
-# Build face_matcher binary (C++)
 RUN cd face_matcher && chmod +x gpp_build_face_matcher.sh && ./gpp_build_face_matcher.sh
 
-# Build TypeScript
-RUN npm run build
+# Build app
+RUN pnpm run build
 
-# -----------------------
-# STAGE 2: RUNTIME STAGE
-# -----------------------
-FROM node:20-bookworm-slim AS runtime
+# Keep only production dependencies
+RUN pnpm prune --prod
 
-# Install runtime dependencies for C++ binary
-RUN apt-get update && apt-get install -y \
-    libopencv-dev \
-    && rm -rf /var/lib/apt/lists/*
+# Stage 2: runtime
+
+FROM base AS runtime
+
+# Runtime libraries required by the C++ binary
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libopencv-dev && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-# Copy only production dependencies
-COPY --from=builder /app/package*.json ./
-RUN npm install --omit=dev
-
-# Copy compiled JS files
+# Copy node_modules and compiled JS
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 
-# Copy config, model files, and face matcher binary
+# Copy resources needed by the matcher at runtime
 COPY --from=builder /app/haarcascade_frontalface_default.xml .
 COPY --from=builder /app/face_matcher_model.onnx .
 COPY --from=builder /app/face_matcher/bin ./face_matcher/bin
 
-# Expose the app port
+ENV NODE_ENV=production
 EXPOSE 5123
 
-# Run the server
 CMD ["node", "dist/index.js"]
