@@ -7,9 +7,13 @@ import { processImage, cleanUpFiles } from './utils/imagesProcessor'
 import config from './config'
 import { FaceMatchRequest, FaceMatchResponse, Task } from './interfaces'
 import { log, warn, error } from './utils/logger'
+import { isImageOverLimit } from './utils/checkImageSize'
 
 export function createApp(): Application {
   const app = express()
+  // Configurable max size (bytes)
+  const maxImagesBytes = parseInt(process.env.MAX_IMAGE_BYTES || '500', 10) || 500
+
   // 1. Start / monitor C++ matcher
   let cppProcess: ChildProcessWithoutNullStreams
   let isReady = false
@@ -86,9 +90,9 @@ export function createApp(): Application {
   queue.drain(() => log('[Queue] All tasks drained'))
 
   /// Enqueues a task and returns a Promise with the matcher result.
-  function enqueueMatch(temp1: string, temp2: string, requestId: number): Promise<FaceMatchResponse> {
+  function enqueueMatch(tempImage1Path: string, tempImage2Path: string, requestId: number): Promise<FaceMatchResponse> {
     return new Promise((resolve, reject) => {
-      queue.push({ tempImage1Path: temp1, tempImage2Path: temp2, requestId, resolve, reject })
+      queue.push({ tempImage1Path, tempImage2Path, requestId, resolve, reject })
     })
   }
 
@@ -109,16 +113,23 @@ export function createApp(): Application {
       return
     }
 
-    const temp1 = `./temp_img1_${requestId}.jpg`
-    const temp2 = `./temp_img2_${requestId}.jpg`
+    const tempImage1Path = `./temp_img1_${requestId}.jpg`
+    const tempImage2Path = `./temp_img2_${requestId}.jpg`
 
     try {
       log('Downloading / copying images…')
-      await Promise.all([processImage(image1_url, temp1), processImage(image2_url, temp2)])
+      await Promise.all([processImage(image1_url, tempImage1Path), processImage(image2_url, tempImage2Path)])
       log('Images ready on disk')
 
+      if (isImageOverLimit(tempImage1Path, maxImagesBytes) || isImageOverLimit(tempImage2Path, maxImagesBytes)) {
+        warn(`[size‑check] img1=${tempImage1Path} KB, img2=${tempImage2Path} KB, limit=${maxImagesBytes} KB`)
+        cleanUpFiles(tempImage1Path, tempImage2Path)
+        res.status(413).json({ error: `Image exceeds ${maxImagesBytes} kb size limit` })
+        return
+      }
+
       const result = await Promise.race([
-        enqueueMatch(temp1, temp2, requestId),
+        enqueueMatch(tempImage1Path, tempImage2Path, requestId),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Matcher timeout')), 10_000)),
       ])
 
@@ -126,7 +137,7 @@ export function createApp(): Application {
     } catch (err) {
       error('Face‑match failure:', err)
       res.status(500).json({ error: (err as Error).message })
-      cleanUpFiles(temp1, temp2)
+      cleanUpFiles(tempImage1Path, tempImage2Path)
     }
   })
 
