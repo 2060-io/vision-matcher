@@ -84,6 +84,13 @@ The Node.js server uses the `face_matcher` binary to handle HTTP requests for fa
    node server.js
    ```
 
+## Environment Variables
+
+| Variable          | Default | Description                             |
+| ----------------- | ------- | --------------------------------------- |
+| `MAX_IMAGE_BYTES` | `500`   | Max allowed image size per file (in KB) |
+| `PORT`            | `5123`  | Port os service                         |
+
 ## Docker
 
 You can use Docker to containerize and run the entire application, simplifying deployment.
@@ -106,24 +113,57 @@ docker run -p 5123:5123 vision-matcher
 
 This will start the Node.js server within a Docker container and expose it on port 5123.
 
+### Using Docker Compose
+
+To run the service along with all its dependencies using Docker Compose, create a file named `docker-compose.yml` run the service with following:
+Then run:
+
+```bash
+docker compose up --build
+```
+
+This will:
+
+- Build the Docker image
+- Start the container
+- Expose port `5123` for HTTP requests
+
+You can then send requests to:
+
+```bash
+http://localhost:5123/face_match
+```
+
 ## Usage
 
-Once the server is running (either natively or in a Docker container), you can send HTTP requests to the `/face_match` endpoint for face matching operations.
-
-## Testing the Application
-
-To test the face matching functionality, you can use a tool like `curl` to send a POST request to the `/face_match` endpoint. Here's an example:
+Send a POST request to `/face_match` with two image URLs (supports `http(s)://`, `file://`, and base64 `data:image/...`):
 
 ```bash
 curl -X POST http://localhost:5123/face_match \
-        -H "Content-Type: application/json" \
-        -d '{
-            "image1_url": "file:/home/path/to/vision-matcher/test/assets/angelina1.jpeg",
-            "image2_url": "file:/home/path/to/vision-matcher/test/assets/angelina2.jpeg"
-            }'
+     -H "Content-Type: application/json" \
+     -d '{
+           "image1_url": "file:/path/to/angelina1.jpeg",
+           "image2_url": "file:/path/to/angelina2.jpeg"
+         }'
 ```
 
-This command sends a request with two image URLs to compare, and the server responds with the result of the face matching operation.
+### Example response
+
+```json
+{
+  "match": true,
+  "distance": 0.432,
+  "requestId": 1712490001234
+}
+```
+
+If an image exceeds the size limit (`MAX_IMAGE_KB`), the server responds with:
+
+```json
+{
+  "error": "Image exceeds size limit"
+}
+```
 
 ## License
 
