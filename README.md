@@ -156,14 +156,6 @@ curl -X POST http://localhost:5123/face_match \
 }
 ```
 
-If an image exceeds the size limit (`MAX_IMAGE_KB`), the server responds with:
-
-```json
-{
-  "error": "Image exceeds size limit"
-}
-```
-
 ## License
 
 This project is licensed under terms specified in the `LICENSE` file.
