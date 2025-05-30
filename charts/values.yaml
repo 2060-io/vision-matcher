@@ -1,0 +1,22 @@
+
+app:
+  name: vision-matcher
+
+namespace: 
+  name: demos
+
+statefulset:
+  name: vision-matcher
+  serviceName: vision-matcher
+  replicas: 1
+  containerName: vision-matcher
+  image:
+    repository: io2060/vision-matcher
+    tag: latest
+    pullPolicy: Always
+  storage: 1Gi
+
+service:
+  name: vision-matcher-service
+  ports:
+    redis: 5123
