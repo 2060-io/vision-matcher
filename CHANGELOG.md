@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.3](https://github.com/2060-io/vision-matcher/compare/v1.1.2...v1.1.3) (2025-06-03)
+
+
+### Bug Fixes
+
+* missing tag_name release please variable ([#23](https://github.com/2060-io/vision-matcher/issues/23)) ([4087fe5](https://github.com/2060-io/vision-matcher/commit/4087fe5ba69c3af4c0111f878bbf08ec825cd81b))
+
 ## [1.1.2](https://github.com/2060-io/vision-matcher/compare/v1.1.1...v1.1.2) (2025-06-03)
 
 
