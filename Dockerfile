@@ -13,6 +13,7 @@ RUN apt-get update && \
         build-essential \
         pkg-config \
         libopencv-dev \
+        ca-certificates \
         curl && \
     rm -rf /var/lib/apt/lists/*
 
