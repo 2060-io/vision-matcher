@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/2060-io/vision-matcher/compare/v1.1.0...v1.1.1) (2025-06-03)
+
+
+### Bug Fixes
+
+* add helm chart to repository ([#19](https://github.com/2060-io/vision-matcher/issues/19)) ([0307bb2](https://github.com/2060-io/vision-matcher/commit/0307bb28397897f2456b5e65b06fc4e59c7a426a))
+
 ## [1.1.0](https://github.com/2060-io/vision-matcher/compare/v1.0.0...v1.1.0) (2025-04-23)
 
 
