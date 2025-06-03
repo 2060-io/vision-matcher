@@ -1,6 +1,6 @@
 {
   "name": "vision-matcher",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Vision Matcher is a project that provides a face matching utility",
   "main": "dist/index.js",
   "scripts": {

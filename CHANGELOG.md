@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/2060-io/vision-matcher/compare/v1.1.1...v1.1.2) (2025-06-03)
+
+
+### Bug Fixes
+
+* ci release output ([#21](https://github.com/2060-io/vision-matcher/issues/21)) ([859d3e2](https://github.com/2060-io/vision-matcher/commit/859d3e27ae7a4e2be083d457997ee7364ffd24c5))
+
 ## [1.1.1](https://github.com/2060-io/vision-matcher/compare/v1.1.0...v1.1.1) (2025-06-03)
 
 
