@@ -24,7 +24,8 @@ env:
 jobs:
   release:
     runs-on: ubuntu-latest
-
+    outputs:
+      release_created: ${{ steps.release-please.outputs.release_created }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -33,13 +34,19 @@ jobs:
         uses: azure/setup-helm@v3
 
       - name: Run Release Please
-        id: release
+        id: release-please
         uses: googleapis/release-please-action@v4
         with:
           release-type: node
           token: ${{ secrets.GITHUB_TOKEN }}
           manifest-file: .release-please-manifest.json
           config-file: release-please-config.json
+
+      - name: Print release outputs for debugging
+        continue-on-error: true
+        run: |
+            echo "Release outputs:"
+            echo "${{ toJson(steps.release-please.outputs) }}"
 
   build-and-push:
     needs: release
