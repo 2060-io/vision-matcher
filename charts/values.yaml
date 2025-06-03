@@ -3,7 +3,7 @@ app:
   name: vision-matcher
 
 namespace: 
-  name: demos
+  name: default
 
 statefulset:
   name: vision-matcher
