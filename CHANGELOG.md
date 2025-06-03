@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.4](https://github.com/2060-io/vision-matcher/compare/v1.1.3...v1.1.4) (2025-06-03)
+
+
+### Bug Fixes
+
+* add ca-certificates to docker image ([04ff00d](https://github.com/2060-io/vision-matcher/commit/04ff00de4a25bb3956f0afcb19cf88ae8f4c05a6))
+
 ## [1.1.3](https://github.com/2060-io/vision-matcher/compare/v1.1.2...v1.1.3) (2025-06-03)
 
 
