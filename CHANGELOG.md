@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.5](https://github.com/2060-io/vision-matcher/compare/v1.1.4...v1.1.5) (2025-06-04)
+
+
+### Bug Fixes
+
+* update chart name ([#26](https://github.com/2060-io/vision-matcher/issues/26)) ([aed94ff](https://github.com/2060-io/vision-matcher/commit/aed94ffea097b900fb4960a9a9a4426a29741ae6))
+
 ## [1.1.4](https://github.com/2060-io/vision-matcher/compare/v1.1.3...v1.1.4) (2025-06-03)
 
 
