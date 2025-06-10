@@ -31,8 +31,8 @@ spec:
     spec:
       containers:
         - name: {{ .Values.statefulset.containerName }}
-          image: {{ .Values.statefulset.image.repository }}:{{ .Values.statefulset.image.tag }}
-          imagePullPolicy: {{ .Values.statefulset.image.pullPolicy }}
+          image: io2060/vision-matcher:{{ .Chart.Version }}
+          imagePullPolicy: {{ .Values.statefulset.pullPolicy }}
           ports:
             - containerPort: {{ .Values.service.ports.redis }}
           volumeMounts:
