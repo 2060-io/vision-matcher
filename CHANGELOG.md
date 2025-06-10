@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.6](https://github.com/2060-io/vision-matcher/compare/v1.1.5...v1.1.6) (2025-06-10)
+
+
+### Bug Fixes
+
+* use fix repo/image in chart ([#28](https://github.com/2060-io/vision-matcher/issues/28)) ([af6735a](https://github.com/2060-io/vision-matcher/commit/af6735a1d69c794bab5067b4723b9b9f9fc174b7))
+
 ## [1.1.5](https://github.com/2060-io/vision-matcher/compare/v1.1.4...v1.1.5) (2025-06-04)
 
 
