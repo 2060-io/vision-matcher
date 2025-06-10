@@ -10,10 +10,7 @@ statefulset:
   serviceName: vision-matcher
   replicas: 1
   containerName: vision-matcher
-  image:
-    repository: io2060/vision-matcher
-    tag: latest
-    pullPolicy: Always
+  pullPolicy: Always
   storage: 1Gi
 
 service:
