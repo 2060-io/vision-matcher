@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.7](https://github.com/2060-io/vision-matcher/compare/v1.1.6...v1.1.7) (2025-06-13)
+
+
+### Bug Fixes
+
+* simplifys etup ([#30](https://github.com/2060-io/vision-matcher/issues/30)) ([32e3589](https://github.com/2060-io/vision-matcher/commit/32e3589cdf59e721e0f868981f58bdd3a94847aa))
+
 ## [1.1.6](https://github.com/2060-io/vision-matcher/compare/v1.1.5...v1.1.6) (2025-06-10)
 
 
