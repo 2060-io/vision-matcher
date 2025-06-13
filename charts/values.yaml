@@ -2,9 +2,6 @@
 app:
   name: vision-matcher
 
-namespace: 
-  name: default
-
 statefulset:
   name: vision-matcher
   serviceName: vision-matcher
