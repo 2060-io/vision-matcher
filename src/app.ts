@@ -24,6 +24,16 @@ export function createApp(): Application {
 
     cppProcess.on('error', (err) => error('face_matcher error:', err))
 
+    // Upon any write in stderr, we interpret it as an unexpected error and therefore
+    // kill the process and restart the queue
+    cppProcess.stderr.on('data', (err) => {
+      error('face_matcher error:', err)
+      cppProcess.kill('SIGTERM')
+
+      queue.kill()
+      queue = createQueue()
+    })
+
     cppProcess.on('exit', (code, sig) => {
       error(`face_matcher exited (code=${code}, signal=${sig}) – restarting`)
       isReady = false
@@ -46,45 +56,43 @@ export function createApp(): Application {
   log('Express JSON body‑parser registered')
 
   //3. Async queue
-  const queue = async.queue<Task>((task, cb) => {
-    const { tempImage1Path, tempImage2Path, requestId, resolve, reject } = task
-    log(`[Queue] → matcher  id=${requestId}`)
+  function createQueue() {
+    const _queue = async.queue<Task>((task, cb) => {
+      const { tempImage1Path, tempImage2Path, requestId, resolve, reject } = task
+      log(`[Queue] → matcher  id=${requestId}`)
 
-    cppProcess.stdin.write(`${requestId},${tempImage1Path},${tempImage2Path}\n`)
+      cppProcess.stdin.write(`${requestId},${tempImage1Path},${tempImage2Path}\n`)
 
-    let output = ''
-    const listener = (buf: Buffer) => {
-      output += buf.toString()
-      if (output.includes('\n')) {
-        cppProcess.stdout.off('data', listener)
-        log(`[Queue] ← matcher  id=${requestId}`)
+      let output = ''
+      const listener = (buf: Buffer) => {
+        output += buf.toString()
+        if (output.includes('\n')) {
+          cppProcess.stdout.off('data', listener)
+          log(`[Queue] ← matcher  id=${requestId}`)
 
-        try {
-          const m = output.trim().match(/Response: {distance:(-?\d+(\.\d+)?), requestId:(\d+), match:(true|false)}/)
-          if (!m) throw new Error('Regex mismatch')
+          try {
+            const response = JSON.parse(output) as FaceMatchResponse
 
-          const resId = Number(m[3])
-          if (resId !== requestId) throw new Error('Mismatched requestId')
+            if (response.requestId !== requestId) throw new Error('Mismatched requestId')
 
-          const response: FaceMatchResponse = {
-            match: m[4] === 'true',
-            distance: parseFloat(m[1]),
-            requestId: resId,
+            resolve(response)
+          } catch (err) {
+            reject(err as Error)
+          } finally {
+            fs.unlinkSync(tempImage1Path)
+            fs.unlinkSync(tempImage2Path)
+            cb()
           }
-          resolve(response)
-        } catch (err) {
-          reject(err as Error)
-        } finally {
-          fs.unlinkSync(tempImage1Path)
-          fs.unlinkSync(tempImage2Path)
-          cb()
         }
       }
-    }
-    cppProcess.stdout.on('data', listener)
-  }, 1)
+      cppProcess.stdout.on('data', listener)
+    }, 1)
 
-  queue.drain(() => log('[Queue] All tasks drained'))
+    _queue.drain(() => log('[Queue] All tasks drained'))
+    return _queue
+  }
+
+  let queue = createQueue()
 
   /// Enqueues a task and returns a Promise with the matcher result.
   function enqueueMatch(tempImage1Path: string, tempImage2Path: string, requestId: number): Promise<FaceMatchResponse> {

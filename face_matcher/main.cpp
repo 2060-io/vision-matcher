@@ -91,7 +91,12 @@ int main(int argc, char* argv[]) {
         cv::Mat img1 = cv::imread(image1_path);
         cv::Mat img2 = cv::imread(image2_path);
         if (img1.empty() || img2.empty()) {
-            std::cerr << "Error: Error reading images." << std::endl;
+            std::cout << "{"
+                    << "\"distance\":" << 1 << ", "
+                    << "\"requestId\":" << requestId << ", "
+                    << "\"match\":false, "
+                    << "\"error\":\"Error reading images.\""
+                    << "}" << std::endl;
             continue;
         }
 
@@ -101,7 +106,12 @@ int main(int argc, char* argv[]) {
 
         // Ensure faces are detected in both images
         if (extracted_faces_1.empty() || extracted_faces_2.empty()) {
-            std::cerr << "Error: No faces detected in one or both images." << std::endl;
+            std::cout << "{"
+                    << "\"distance\":" << 1 << ", "
+                    << "\"requestId\":" << requestId << ", "
+                    << "\"match\":false, "
+                    << "\"error\":\"No faces detected in one or both images.\""
+                    << "}" << std::endl;
             continue;
         }
 
@@ -116,7 +126,12 @@ int main(int argc, char* argv[]) {
         } else if (distance_algorithm == "euclidean") {
             distance = findEuclideanDistance(pred1, pred2);
         } else {
-            std::cerr << "Error: Unknown distance algorithm: " << distance_algorithm << std::endl;
+            std::cout << "{"
+                    << "\"distance\":" << 1 << ", "
+                    << "\"requestId\":" << requestId << ", "
+                    << "\"match\":false, "
+                    << "\"error\":\"Unknown distance algorithm: " << distance_algorithm << "\""
+                    << "}" << std::endl;
             continue;
         }
 
@@ -124,9 +139,11 @@ int main(int argc, char* argv[]) {
         bool match = (distance < distance_threshold);
 
         // Output the response
-        std::cout << "Response: {distance:" << distance
-                  << ", requestId:" << requestId
-                  << ", match:" << (match ? "true" : "false") << "}" << std::endl;
+        std::cout << "{"
+                << "\"distance\":" << distance << ", "
+                << "\"requestId\":" << requestId << ", "
+                << "\"match\":" << (match ? "true" : "false")
+                << "}" << std::endl;
     }
 
     return 0;
