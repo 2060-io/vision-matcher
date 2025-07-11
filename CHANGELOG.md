@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/2060-io/vision-matcher/compare/v1.1.7...v1.2.0) (2025-07-11)
+
+
+### Features
+
+* error on face matcher response JSON structure ([#33](https://github.com/2060-io/vision-matcher/issues/33)) ([a462196](https://github.com/2060-io/vision-matcher/commit/a46219699318f924d2cd648a46b57ec871473703))
+
 ## [1.1.7](https://github.com/2060-io/vision-matcher/compare/v1.1.6...v1.1.7) (2025-06-13)
 
 
