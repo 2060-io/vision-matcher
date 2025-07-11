@@ -37,6 +37,7 @@ export interface FaceMatchResponse {
   match: boolean
   distance: number
   requestId: number
+  error?: string
 }
 
 /**
