@@ -22,6 +22,7 @@ export function createApp(): Application {
   // protocol transport instances
   let transport: UnixSocketTransport | null = null
   let protocol: ProtocolHandler | null = null
+  let currentSocketPath: string | null = null // unique per-process socket
 
   async function waitForSocket(path: string, timeoutMs = 30000) {
     const start = Date.now()
@@ -31,14 +32,24 @@ export function createApp(): Application {
     }
   }
 
+  function makeUniqueSocketPath(): string {
+    const id = `${process.pid}_${Date.now()}_${Math.random().toString(36).slice(2)}`
+    return `/tmp/face_matcher_${id}.sock`
+  }
+
+  function safeUnlink(p: string) {
+    try {
+      if (fs.existsSync(p)) fs.unlinkSync(p)
+    } catch { /* ignore */ }
+  }
+
   async function connectProtocol(): Promise<void> {
-    const socketPath = config.arguments.socket_path
-    if (!socketPath) throw new Error('config.arguments.socket_path is required')
-    await waitForSocket(socketPath)
-    transport = new UnixSocketTransport(socketPath)
+    if (!currentSocketPath) throw new Error('socket path not initialized')
+    await waitForSocket(currentSocketPath)
+    transport = new UnixSocketTransport(currentSocketPath)
     await transport.connect()
     protocol = new ProtocolHandler(transport)
-    log('Connected to face_matcher via Unix socket')
+    log(`Connected to face_matcher via Unix socket: ${currentSocketPath}`)
 
     // Expect a JSON {"ready":true} once connected
     try {
@@ -62,11 +73,23 @@ export function createApp(): Application {
     transport = null
     protocol = null
     isReady = false
+    currentSocketPath = null
   }
 
   function startFaceMatcher() {
     log('Starting face_matcher process…')
-    const args = Object.entries(config.arguments).flatMap(([k, v]) => [`-${k}`, v])
+
+    // Build a unique socket path per instance and ensure it's clean
+    currentSocketPath = makeUniqueSocketPath()
+    safeUnlink(currentSocketPath)
+
+    // Build args excluding any pre-set socket_path, then append our unique one
+    const baseArgs = Object.entries(config.arguments)
+      .filter(([k]) => k !== 'socket_path')
+      .flatMap(([k, v]) => [`-${k}`, v])
+    const args = [...baseArgs, '-socket_path', currentSocketPath]
+
+    log(`face_matcher socket_path: ${currentSocketPath}`)
     cppProcess = spawn(config.executablePath, args)
 
     isReady = false
