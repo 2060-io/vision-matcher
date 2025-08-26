@@ -3,9 +3,15 @@
 #include "face_extractor.h"
 #include "prediction.h"
 #include "utils.h"
+
+#include "ipc/unix_socket_transport.h"
+#include "ipc/protocol_handler.h"
+#include "ipc/nlohmann/json.hpp"
+
 #include <opencv2/opencv.hpp>
 #include <opencv2/dnn.hpp>
 #include <iostream>
+#include <algorithm>
 
 /**
  * @brief Main function for face matching application.
@@ -18,132 +24,124 @@
  * @return int Returns 0 on success, and -1 on error in loading models.
  */
 int main(int argc, char* argv[]) {
-    // Default arguments for face detector and matcher models
+    // Defaults
     std::string face_detector_path = "haarcascade_frontalface_default.xml";
     std::string face_matcher_model_path = "./face_matcher_model.onnx";
     std::string distance_algorithm = "cosine";
-    double distance_threshold = 0.4;
-    bool allow_multi_faces = false;
+    double      distance_threshold = 0.4;
+    bool        allow_multi_faces = false;
+    std::string socket_path = "/tmp/face_matcher.sock";
 
-    // Parse command-line arguments
+    // Parse CLI
     auto args = parseArguments(argc, argv);
-
-    // Set arguments based on inputs
-    if (args.count("-face_detector_path")) {
-        face_detector_path = args["-face_detector_path"];
-    }
-    if (args.count("-face_matcher_model_path")) {
-        face_matcher_model_path = args["-face_matcher_model_path"];
-    }
-    if (args.count("-distance_algorithm")) {
-        distance_algorithm = args["-distance_algorithm"];
-    }
-    if (args.count("-distance_threshold")) {
-        distance_threshold = std::stod(args["-distance_threshold"]);
-    }
+    if (args.count("-face_detector_path"))      face_detector_path      = args["-face_detector_path"];
+    if (args.count("-face_matcher_model_path")) face_matcher_model_path = args["-face_matcher_model_path"];
+    if (args.count("-distance_algorithm"))      distance_algorithm      = args["-distance_algorithm"];
+    if (args.count("-distance_threshold"))      distance_threshold      = std::stod(args["-distance_threshold"]);
     if (args.count("-allow_multi_faces")) {
         std::string value = args["-allow_multi_faces"];
         // Convert string to boolean
         std::transform(value.begin(), value.end(), value.begin(), ::tolower);
         allow_multi_faces = (value == "true" || value == "1");
     }
+    if (args.count("-socket_path"))
+        socket_path = args["-socket_path"];
 
     std::cout << "Loading Models...." << std::endl;
 
-    // Load face detector
+    // Load detector
     cv::CascadeClassifier detector = getDetector(face_detector_path);
     if (detector.empty()) {
         std::cerr << "Error: Error loading cascade file for face detection." << std::endl;
         return -1;
     }
 
-    // Load face matcher model
+    // Load matcher model
     cv::dnn::Net opencv_model = cv::dnn::readNetFromONNX(face_matcher_model_path);
     std::cout << "Models Loaded" << std::endl;
-    std::cout << "--READY--" << std::endl;
 
-    // Process input from standard input
-    std::string line;
-    while (std::getline(std::cin, line)) {
-        // Split line into components based on first comma
-        size_t firstCommaPos = line.find(',');
-        if (firstCommaPos == std::string::npos) {
-            std::cerr << "Error: Invalid input format: " << line << std::endl;
+    // Prepare callbacks
+    auto img_cb = [](const cv::Mat&) -> std::pair<cv::Mat, std::string> {
+        return {}; // not used
+    };
+
+    auto data_cb = [&](const std::string& json_str) -> std::string {
+        using nlohmann::json;
+        try {
+            json j = json::parse(json_str);
+            // Expected: { requestId, image1_path, image2_path }
+            const auto requestId = j.value("requestId", 0);
+            const auto image1_path = j.value("image1_path", std::string());
+            const auto image2_path = j.value("image2_path", std::string());
+
+            if (image1_path.empty() || image2_path.empty()) {
+                json err = { {"match", false}, {"distance", 1.0}, {"requestId", requestId}, {"error", "Missing image paths"} };
+                return err.dump();
+            }
+
+            cv::Mat img1 = cv::imread(image1_path);
+            cv::Mat img2 = cv::imread(image2_path);
+            if (img1.empty() || img2.empty()) {
+                json err = { {"match", false}, {"distance", 1.0}, {"requestId", requestId}, {"error", "Error reading images."} };
+                return err.dump();
+            }
+
+            auto faces1 = extractFaces(img1, detector, allow_multi_faces);
+            auto faces2 = extractFaces(img2, detector, allow_multi_faces);
+            if (faces1.empty() || faces2.empty()) {
+                json err = { {"match", false}, {"distance", 1.0}, {"requestId", requestId}, {"error", "No faces detected in one or both images."} };
+                return err.dump();
+            }
+
+            cv::Mat pred1 = getPrediction(std::get<0>(faces1[0]), opencv_model).clone();
+            cv::Mat pred2 = getPrediction(std::get<0>(faces2[0]), opencv_model).clone();
+
+            double distance = 1.0;
+            if (distance_algorithm == "cosine") {
+                distance = findCosineDistance(pred1, pred2);
+            } else if (distance_algorithm == "euclidean") {
+                distance = findEuclideanDistance(pred1, pred2);
+            } else {
+                nlohmann::json err = { {"match", false}, {"distance", 1.0}, {"requestId", requestId},
+                                       {"error", std::string("Unknown distance algorithm: ") + distance_algorithm} };
+                return err.dump();
+            }
+
+            bool match = (distance < distance_threshold);
+            nlohmann::json out = { {"match", match}, {"distance", distance}, {"requestId", requestId} };
+            return out.dump();
+        } catch (const std::exception& e) {
+            nlohmann::json err = { {"match", false}, {"distance", 1.0}, {"requestId", 0}, {"error", e.what()} };
+            return err.dump();
+        }
+    };
+
+    CombinedProcessingCallback comb_cb = nullptr; // not used now
+
+    // Open Unix socket server
+    UnixSocketTransport listener(socket_path);
+    if (!listener.open_server()) {
+        std::cerr << "Failed to open Unix socket at " << socket_path << "\n";
+        return -1;
+    }
+    std::cout << "Server listening at socket: " << socket_path << std::endl;
+
+    while (true) {
+        auto client = listener.accept_client();
+        if (!client) {
+            std::cerr << "Accept failed, continuing..." << std::endl;
             continue;
         }
+        std::cout << "Client connected." << std::endl;
 
-        // Extract requestId and remaining input
-        std::string requestId = line.substr(0, firstCommaPos);
-        std::string remaining = line.substr(firstCommaPos + 1);
+        ProtocolHandler handler(client.get(), img_cb, data_cb, comb_cb);
 
-        // Split remaining input into image paths
-        size_t secondCommaPos = remaining.find(',');
-        if (secondCommaPos == std::string::npos) {
-            std::cerr << "Error: Invalid input format: " << line << std::endl;
-            continue;
-        }
+        // Notify readiness to the client
+        handler.send_json(std::string("{\"ready\":true}"));
 
-        // Extract paths for image1 and image2
-        std::string image1_path = remaining.substr(0, secondCommaPos);
-        std::string image2_path = remaining.substr(secondCommaPos + 1);
-
-        // Read images
-        cv::Mat img1 = cv::imread(image1_path);
-        cv::Mat img2 = cv::imread(image2_path);
-        if (img1.empty() || img2.empty()) {
-            std::cout << "{"
-                    << "\"distance\":" << 1 << ", "
-                    << "\"requestId\":" << requestId << ", "
-                    << "\"match\":false, "
-                    << "\"error\":\"Error reading images.\""
-                    << "}" << std::endl;
-            continue;
-        }
-
-        // Extract faces using detector
-        std::vector<std::tuple<cv::Mat, cv::Rect>> extracted_faces_1 = extractFaces(img1, detector, allow_multi_faces);
-        std::vector<std::tuple<cv::Mat, cv::Rect>> extracted_faces_2 = extractFaces(img2, detector, allow_multi_faces);
-
-        // Ensure faces are detected in both images
-        if (extracted_faces_1.empty() || extracted_faces_2.empty()) {
-            std::cout << "{"
-                    << "\"distance\":" << 1 << ", "
-                    << "\"requestId\":" << requestId << ", "
-                    << "\"match\":false, "
-                    << "\"error\":\"No faces detected in one or both images.\""
-                    << "}" << std::endl;
-            continue;
-        }
-
-        // Get predictions from the model
-        cv::Mat pred1 = getPrediction(std::get<0>(extracted_faces_1[0]), opencv_model).clone();
-        cv::Mat pred2 = getPrediction(std::get<0>(extracted_faces_2[0]), opencv_model).clone();
-
-        // Calculate the distance based on selected algorithm
-        double distance;
-        if (distance_algorithm == "cosine") {
-            distance = findCosineDistance(pred1, pred2);
-        } else if (distance_algorithm == "euclidean") {
-            distance = findEuclideanDistance(pred1, pred2);
-        } else {
-            std::cout << "{"
-                    << "\"distance\":" << 1 << ", "
-                    << "\"requestId\":" << requestId << ", "
-                    << "\"match\":false, "
-                    << "\"error\":\"Unknown distance algorithm: " << distance_algorithm << "\""
-                    << "}" << std::endl;
-            continue;
-        }
-
-        // Determine if the faces match based on the distance threshold
-        bool match = (distance < distance_threshold);
-
-        // Output the response
-        std::cout << "{"
-                << "\"distance\":" << distance << ", "
-                << "\"requestId\":" << requestId << ", "
-                << "\"match\":" << (match ? "true" : "false")
-                << "}" << std::endl;
+        std::string why_exit;
+        while (handler.handle_one_message(why_exit)) {}
+        std::cerr << "Session ended: " << why_exit << std::endl;
     }
 
     return 0;

@@ -4,8 +4,8 @@ cmake_minimum_required(VERSION 3.10)
 # Project name
 project(FaceMatcher)
 
-# Set C++ version
-set(CMAKE_CXX_STANDARD 11)
+# Set C++ version (protocol sources use C++17 features like structured bindings)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Optionally specify an OpenCV directory
@@ -29,10 +29,10 @@ else()
     find_package(OpenCV REQUIRED)
 endif()
 
-# Include directories
-include_directories(${OpenCV_INCLUDE_DIRS} include)
+# Include directories (add ipc for protocol/transport headers)
+include_directories(${OpenCV_INCLUDE_DIRS} include ipc)
 
-# Source files
+# Source files (add protocol/transport .cc files)
 set(SOURCES
     main.cpp
     src/argument_parser.cpp
@@ -40,6 +40,8 @@ set(SOURCES
     src/face_extractor.cpp
     src/prediction.cpp
     src/utils.cpp
+    ipc/unix_socket_transport.cc
+    ipc/protocol_handler.cc
 )
 
 # Add executable target
@@ -53,6 +55,9 @@ if(USE_OPENCV_STATIC)
 else()
     target_link_libraries(face_matcher ${OpenCV_LIBS})
 endif()
+
+# Set output directory for the executable
+set_target_properties(face_matcher PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Set output directory for the executable
 set_target_properties(face_matcher PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

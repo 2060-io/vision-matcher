@@ -7,7 +7,8 @@ const config: Config = {
     face_matcher_model_path: './face_matcher_model.onnx',
     distance_algorithm: 'cosine',
     distance_threshold: '0.4',
-    allow_multi_face: 'false',
+    allow_multi_faces: 'false',            // fixed flag name (matches C++: -allow_multi_faces)
+    socket_path: '/tmp/face_matcher.sock', // new: Unix socket path for protocol transport
   },
 }
 
