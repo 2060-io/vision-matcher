@@ -171,7 +171,7 @@ export function createApp(): Application {
       image2_path: tempImage2Path,
     })
     // Since queue concurrency is 1, we can wait for the next JSON as the response
-    const deadline = Date.now() + 10000 // safety net timeout at this level as well
+    const deadline = Date.now() + 30000 // was 10000
     while (true) {
       const msg = await protocol.recvMessage()
       if (!msg) throw new Error('Disconnected from matcher')
@@ -209,8 +209,10 @@ export function createApp(): Application {
       return
     }
 
-    const tempImage1Path = `./temp_img1_${requestId}.jpg`
-    const tempImage2Path = `./temp_img2_${requestId}.jpg`
+    // Build absolute paths to avoid cwd mismatches with the native process
+    const path = await import('node:path')
+    const tempImage1Path = path.resolve(`./temp_img1_${requestId}.jpg`)
+    const tempImage2Path = path.resolve(`./temp_img2_${requestId}.jpg`)
 
     try {
       log('Downloading / copying images…')
@@ -219,7 +221,7 @@ export function createApp(): Application {
 
       const result = await Promise.race([
         enqueueMatch(tempImage1Path, tempImage2Path, requestId),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Matcher timeout')), 10_000)),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Matcher timeout')), 30_000)), // was 10_000
       ])
 
       res.json(result)

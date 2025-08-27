@@ -8,6 +8,8 @@ export class UnixSocketTransport extends EventEmitter implements Transport {
     private bufferLen: number = 0;
     private readResolve: ((b: Buffer) => void) | null = null;
     private readReject: ((err: any) => void) | null = null;
+    // NEW: track how many bytes the pending read expects
+    private pendingExpected: number | null = null;
 
     constructor(private socketPath: string) {
         super();
@@ -23,12 +25,13 @@ export class UnixSocketTransport extends EventEmitter implements Transport {
         this.socket.on('data', (chunk: Buffer) => {
             this.buffer.push(chunk);
             this.bufferLen += chunk.length;
-            this._maybeFulfillRead();
+            this._maybeFulfillRead(); // will use pendingExpected
         });
         this.socket.on('error', (err) => {
             if (this.readReject) {
                 this.readReject(err);
                 this.readReject = null;
+                this.pendingExpected = null;
             }
             this.emit('error', err);
         });
@@ -36,10 +39,10 @@ export class UnixSocketTransport extends EventEmitter implements Transport {
             if (this.readReject) {
                 this.readReject(new Error("Socket closed"));
                 this.readReject = null;
+                this.pendingExpected = null;
             }
             this.emit('close');
         });
-        // Wait until 'connect'
         await new Promise<void>((resolve, reject) => {
             this.socket!.once('connect', resolve);
             this.socket!.once('error', reject);
@@ -53,6 +56,7 @@ export class UnixSocketTransport extends EventEmitter implements Transport {
     }
 
     async read(n: number): Promise<Buffer> {
+        if (n === 0) return Buffer.alloc(0);
         if (this.bufferLen >= n) {
             return this._drainBuffer(n);
         }
@@ -60,28 +64,33 @@ export class UnixSocketTransport extends EventEmitter implements Transport {
         return new Promise<Buffer>((resolve, reject) => {
             this.readResolve = resolve;
             this.readReject = reject;
-            this._maybeFulfillRead(n);
+            this.pendingExpected = n;
+            this._maybeFulfillRead();
         });
     }
 
-    private _maybeFulfillRead(expected = 0) {
-        // If enough accumulated, fulfill the pending
-        if (this.readResolve && this.bufferLen >= expected) {
+    private _maybeFulfillRead() {
+        const expected = this.pendingExpected;
+        if (!this.readResolve || expected == null) return;
+        if (expected === 0) return; // never fulfill 0-length reads spuriously
+        if (this.bufferLen >= expected) {
             const res = this._drainBuffer(expected);
             const resolve = this.readResolve;
             this.readResolve = null;
             this.readReject = null;
+            this.pendingExpected = null;
             resolve(res);
         }
     }
 
     private _drainBuffer(count: number): Buffer {
+        if (count === 0) return Buffer.alloc(0);
         let out: Buffer;
         if (this.buffer.length > 0 && this.buffer[0].length === count) {
             out = this.buffer.shift() as Buffer;
         } else if (this.buffer.length > 0 && this.buffer[0].length > count) {
-            out = this.buffer[0].subarray(0, count); 
-            this.buffer[0] = this.buffer[0].subarray(count); 
+            out = this.buffer[0].subarray(0, count);
+            this.buffer[0] = this.buffer[0].subarray(count);
         } else {
             let total = 0, bufs: Buffer[] = [];
             while (total < count && this.buffer.length > 0) {

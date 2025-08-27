@@ -12,6 +12,7 @@
 #include <opencv2/dnn.hpp>
 #include <iostream>
 #include <algorithm>
+#include <cstdint>
 
 /**
  * @brief Main function for face matching application.
@@ -70,9 +71,12 @@ int main(int argc, char* argv[]) {
         try {
             json j = json::parse(json_str);
             // Expected: { requestId, image1_path, image2_path }
-            const auto requestId = j.value("requestId", 0);
+            const int64_t requestId = j.value("requestId", 0LL); // 64-bit
             const auto image1_path = j.value("image1_path", std::string());
             const auto image2_path = j.value("image2_path", std::string());
+
+            std::cout << "[matcher] Received requestId=" << requestId
+                      << " img1=" << image1_path << " img2=" << image2_path << std::endl;
 
             if (image1_path.empty() || image2_path.empty()) {
                 json err = { {"match", false}, {"distance", 1.0}, {"requestId", requestId}, {"error", "Missing image paths"} };
@@ -102,16 +106,16 @@ int main(int argc, char* argv[]) {
             } else if (distance_algorithm == "euclidean") {
                 distance = findEuclideanDistance(pred1, pred2);
             } else {
-                nlohmann::json err = { {"match", false}, {"distance", 1.0}, {"requestId", requestId},
-                                       {"error", std::string("Unknown distance algorithm: ") + distance_algorithm} };
+                json err = { {"match", false}, {"distance", 1.0}, {"requestId", requestId},
+                             {"error", std::string("Unknown distance algorithm: ") + distance_algorithm} };
                 return err.dump();
             }
 
             bool match = (distance < distance_threshold);
-            nlohmann::json out = { {"match", match}, {"distance", distance}, {"requestId", requestId} };
+            json out = { {"match", match}, {"distance", distance}, {"requestId", requestId} };
             return out.dump();
         } catch (const std::exception& e) {
-            nlohmann::json err = { {"match", false}, {"distance", 1.0}, {"requestId", 0}, {"error", e.what()} };
+            json err = { {"match", false}, {"distance", 1.0}, {"requestId", 0LL}, {"error", e.what()} };
             return err.dump();
         }
     };
