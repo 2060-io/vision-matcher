@@ -9,6 +9,13 @@ statefulset:
   containerName: vision-matcher
   pullPolicy: Always
   storage: 1Gi
+  resources:
+    requests:
+      cpu: 300m
+      memory: 896Mi
+    limits:
+      cpu: "1"
+      memory: 1536Mi
 
 service:
   name: vision-matcher-service

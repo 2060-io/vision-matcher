@@ -35,6 +35,13 @@ spec:
           imagePullPolicy: {{ .Values.statefulset.pullPolicy }}
           ports:
             - containerPort: {{ .Values.service.ports.redis }}
+          resources:
+            requests:
+              memory: {{ .Values.statefulset.resources.requests.memory | quote }}
+              cpu: {{ .Values.statefulset.resources.requests.cpu | quote }}
+            limits:
+              memory: {{ .Values.statefulset.resources.limits.memory | quote }}
+              cpu: {{ .Values.statefulset.resources.limits.cpu | quote }}
           volumeMounts:
             - name: vision-matcher-storage
               mountPath: /data
