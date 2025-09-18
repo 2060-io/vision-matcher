@@ -1,3 +1,5 @@
+global:
+  domain: dev.example.io  
 
 app:
   name: vision-matcher
@@ -20,4 +22,10 @@ statefulset:
 service:
   name: vision-matcher-service
   ports:
-    redis: 5123
+    app: 5123
+
+ingress:
+  enabled: true
+  name: vision-matcher-ingress
+  host: vm.{{ .Values.global.domain }}
+  tlsSecret: vm.{{ .Values.global.domain }}-cert

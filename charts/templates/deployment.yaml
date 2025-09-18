@@ -1,3 +1,31 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ tpl .Values.ingress.name . }}
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - {{ tpl .Values.ingress.host . }}
+      secretName: {{ tpl .Values.ingress.tlsSecret . }}
+  rules:
+    - host: {{ tpl .Values.ingress.host . }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ .Values.service.name }}
+                port:
+                  number: {{ .Values.service.ports.app }}
+---
+{{- end }}
+
 apiVersion: v1
 kind: Service
 metadata:
@@ -8,8 +36,8 @@ spec:
     app: {{ .Values.app.name }}
   ports:
     - protocol: TCP
-      port: {{ .Values.service.ports.redis }}
-      targetPort: {{ .Values.service.ports.redis }}
+      port: {{ .Values.service.ports.app }}
+      targetPort: {{ .Values.service.ports.app }}
 
 ---
 
@@ -34,7 +62,7 @@ spec:
           image: io2060/vision-matcher:{{ .Chart.Version }}
           imagePullPolicy: {{ .Values.statefulset.pullPolicy }}
           ports:
-            - containerPort: {{ .Values.service.ports.redis }}
+            - containerPort: {{ .Values.service.ports.app }}
           resources:
             requests:
               memory: {{ .Values.statefulset.resources.requests.memory | quote }}
