@@ -40,7 +40,9 @@ export function createApp(): Application {
   function safeUnlink(p: string) {
     try {
       if (fs.existsSync(p)) fs.unlinkSync(p)
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   async function connectProtocol(): Promise<void> {
@@ -69,7 +71,9 @@ export function createApp(): Application {
   function teardownProtocol() {
     try {
       transport?.close()
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     transport = null
     protocol = null
     isReady = false
@@ -150,8 +154,12 @@ export function createApp(): Application {
       } catch (err) {
         reject(err as Error)
       } finally {
-        try { fs.unlinkSync(tempImage1Path) } catch {}
-        try { fs.unlinkSync(tempImage2Path) } catch {}
+        try {
+          fs.unlinkSync(tempImage1Path)
+        } catch {}
+        try {
+          fs.unlinkSync(tempImage2Path)
+        } catch {}
         cb()
       }
     }, 1)
@@ -162,7 +170,11 @@ export function createApp(): Application {
 
   let queue = createQueue()
 
-  async function requestFaceMatch(tempImage1Path: string, tempImage2Path: string, requestId: number): Promise<FaceMatchResponse> {
+  async function requestFaceMatch(
+    tempImage1Path: string,
+    tempImage2Path: string,
+    requestId: number,
+  ): Promise<FaceMatchResponse> {
     if (!protocol) throw new Error('Protocol not connected')
     // Send JSON-only request (C++ will read images from paths)
     await protocol.sendJson({
