@@ -92,8 +92,9 @@ export class UnixSocketTransport extends EventEmitter implements Transport {
       out = this.buffer[0].subarray(0, count)
       this.buffer[0] = this.buffer[0].subarray(count)
     } else {
-      let total = 0,
-        bufs: Buffer[] = []
+      let total = 0
+      const bufs: Buffer[] = []
+
       while (total < count && this.buffer.length > 0) {
         const need = count - total
         const b = this.buffer[0]
