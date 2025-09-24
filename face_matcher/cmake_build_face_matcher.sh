@@ -60,7 +60,7 @@ cd build
 cmake $OPENCV_DIR_OPTION $STATIC_OPTION ..
 
 # Compile the project
-make
+make -j"$(nproc)"
 
 # Copy the output binary to the specified bin directory
 cp ./bin/face_matcher ../bin/
