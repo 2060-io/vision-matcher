@@ -28,7 +28,6 @@ Vision Matcher provides a face-matching utility. It consists of a **C++ binary**
 ## Project Structure
 
 - `face_matcher/` – C++ sources for the face-matching binary.
-
   - `bin/` – Target directory for the compiled `face_matcher` binary.
   - `include/` – C++ headers.
   - `src/` – C++ sources.
@@ -40,7 +39,6 @@ Vision Matcher provides a face-matching utility. It consists of a **C++ binary**
 - `haarcascade_frontalface_default.xml` – Cascade used for face detection.
 
 - **Server code** – The HTTP server that calls the binary.
-
   - If the repository exposes TypeScript, the entry point is commonly `src/index.ts` (built to `dist/index.js`).
 
 - `test/` – tests for the API.
@@ -99,7 +97,6 @@ The Node server exposes an HTTP endpoint (`/face_match`) and shells out to the C
    ```
 
 3. **Run the server**
-
    - **Development (TypeScript projects):**
 
      ```bash

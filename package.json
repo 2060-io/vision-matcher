@@ -8,26 +8,31 @@
     "format": "pnpm prettier --write",
     "check-types": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "check-format": "pnpm prettier --list-different",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpileOnly src/index.ts",
     "lint": "pnpm eslint \"{src,apps,libs,test}/**/*.ts\"",
-    "test": "mocha --exit --recursive 'test/**/*.test.ts'"
+    "test": "jest --runInBand",
+    "build:matcher": "cd face_matcher && ./gpp_build_face_matcher.sh",
+    "setup:model": "./download_face_match_model.sh",
+    "pretest": "pnpm build && (test -f face_matcher/bin/face_matcher || pnpm build:matcher) && (test -f face_matcher_model.onnx || pnpm setup:model)"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
     "async": "^3.2.6",
     "axios": "^1.7.9",
-    "express": "^4.21.2",
-    "body-parser": "^1.20.2"
+    "body-parser": "^1.20.2",
+    "express": "^4.21.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.24.0",
     "@types/async": "^3.2.24",
     "@types/body-parser": "^1.19.5",
     "@types/express": "^5.0.0",
+    "@types/jest": "^30.0.0",
     "@types/node": "^22.13.10",
+    "@types/supertest": "^6.0.3",
     "@typescript-eslint/eslint-plugin": "^8.26.1",
     "@typescript-eslint/parser": "^8.26.1",
     "body-parser": "^1.20.2",
@@ -38,9 +43,11 @@
     "eslint-plugin-jsdoc": "^50.6.9",
     "eslint-plugin-prettier": "^5.2.6",
     "eslint-plugin-unused-imports": "^4.1.4",
+    "jest": "^30.1.3",
     "mocha": "^10.8.2",
     "prettier": "^3.5.3",
     "supertest": "^7.0.0",
+    "ts-jest": "^29.4.4",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.8.2"
   },

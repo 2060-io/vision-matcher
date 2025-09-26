@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Checkout vision-matcher
         uses: actions/checkout@v4
-      
+
       - name: Setup Helm
         uses: azure/setup-helm@v3
 
@@ -27,6 +27,11 @@ jobs:
       - name: Enable corepack
         run: corepack enable
 
+      - name: Install system deps (OpenCV & toolchain)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake pkg-config libopencv-dev
+          echo "PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig" >> $GITHUB_ENV
       - name: Install dependencies
         run: pnpm install
 
@@ -35,6 +40,9 @@ jobs:
 
       - name: Check Types
         run: pnpm check-types
+
+      - name: Unit tests
+        run: pnpm test
 
       - name: Build
         run: pnpm build
