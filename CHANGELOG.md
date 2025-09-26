@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.3.0](https://github.com/2060-io/vision-matcher/compare/v1.2.0...v1.3.0) (2025-09-26)
+
+
+### Features
+
+* Add resources and request to deployment charts ([#37](https://github.com/2060-io/vision-matcher/issues/37)) ([d38a48e](https://github.com/2060-io/vision-matcher/commit/d38a48ebb8eb76624741b5f198111cc4551f03ad))
+* make Ingress configurable via enabled flag ([#42](https://github.com/2060-io/vision-matcher/issues/42)) ([5909d06](https://github.com/2060-io/vision-matcher/commit/5909d06bc5a0bd1c396bccf25141962e6b80d089))
+* node.js/native interface through Unix sockets ([#39](https://github.com/2060-io/vision-matcher/issues/39)) ([917c00f](https://github.com/2060-io/vision-matcher/commit/917c00f3ebab27be485b71553634146c4f73a579))
+
 ## [1.2.0](https://github.com/2060-io/vision-matcher/compare/v1.1.7...v1.2.0) (2025-07-11)
 
 
